@@ -179,12 +179,7 @@ def convert_upload(upload):
     if extension in {".png", ".jpg", ".jpeg"}:
         return _preview_result(upload, source, mimetypes.guess_type(source.name)[0] or "image/jpeg", "image native")
     if extension == ".pdf":
-        executable = shutil.which("pdftoppm")
-        if not executable:
-            raise ImportErrorSafe("Le moteur PDF Poppler n’est pas installé sur le serveur.")
-        target_prefix = source.with_name("preview")
-        _run([executable, "-f", "1", "-singlefile", "-png", "-r", "150", str(source), str(target_prefix)], "Conversion PDF")
-        return _preview_result(upload, source.with_name("preview.png"), "image/png", "Poppler, première page")
+        return _preview_result(upload, source, "application/pdf", "PDF natif")
     if extension == ".dwg":
         executable = shutil.which("dwg2dxf")
         if not executable:
@@ -195,14 +190,20 @@ def convert_upload(upload):
         source_dxf = source
     preview = source.with_name("preview.svg")
     _dxf_to_svg(source_dxf, preview)
-    return _preview_result(upload, preview, "image/svg+xml", "LibreDWG + ezdxf" if extension == ".dwg" else "ezdxf")
+    executable = shutil.which("rsvg-convert")
+    if not executable:
+        raise ImportErrorSafe("Le convertisseur PDF vectoriel librsvg n’est pas installé sur le serveur.")
+    pdf = source.with_name("plan.pdf")
+    _run([executable, "-f", "pdf", "-o", str(pdf), str(preview)], "Conversion en PDF vectoriel")
+    preview.unlink(missing_ok=True)
+    return _preview_result(upload, pdf, "application/pdf", "LibreDWG + PDF vectoriel" if extension == ".dwg" else "DXF + PDF vectoriel")
 
 
 def preview_file(upload_id):
     if not upload_id.isalnum() or len(upload_id) != 32:
         raise ImportErrorSafe("Identifiant d’import invalide.")
     directory = UPLOAD_DIR / upload_id
-    for name in ("preview.svg", "preview.png", "original.png", "original.jpg", "original.jpeg"):
+    for name in ("plan.pdf", "original.pdf", "original.png", "original.jpg", "original.jpeg", "preview.svg", "preview.png"):
         candidate = directory / name
         if candidate.is_file():
             return candidate, mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"

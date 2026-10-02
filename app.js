@@ -9,6 +9,7 @@ const homeView = document.querySelector('#home-view');
 const editorView = document.querySelector('#editor-view');
 const sheet = document.querySelector('#sheet');
 const sheetFrame = document.querySelector('#sheet-frame');
+const pdfLayer = document.querySelector('#pdf-layer');
 const sheetBackground = document.querySelector('#sheet-background');
 const sheetMargin = document.querySelector('#sheet-margin');
 const mapLayer = document.querySelector('#map-layer');
@@ -37,6 +38,12 @@ let pendingFileName = '';
 let pendingPlanImport = null;
 let panSession = null;
 let serverSaveTimer = null;
+let pdfDocument = null;
+let pdfPage = null;
+let pdfSourceKey = '';
+let pdfRenderTimer = null;
+let pdfRenderGeneration = 0;
+const pdfTileCache = new Map();
 
 function uid(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -303,6 +310,7 @@ function setOrientation(orientation) {
   document.documentElement.style.setProperty('--sheet-height', `${height}mm`);
   document.querySelector('#print-page-style').textContent = `@page { size: A3 ${orientation}; margin: 0; }`;
   renderTitleBlock();
+  if (state.planFile?.previewType === 'application/pdf') queuePdfRender(0);
 }
 
 function mapScale() {
@@ -313,16 +321,141 @@ function updateMapTransform() {
   const scale = mapScale();
   mapLayer.setAttribute('transform', `translate(${150 + state.panX} ${135 + state.panY}) scale(${scale}) translate(-150 -135)`);
   document.querySelector('#plan-zoom-value').textContent = `${state.planZoom} %`;
+  if (state.planFile?.previewType === 'application/pdf') queuePdfRender();
+}
+
+function clearPdfRenderer() {
+  pdfRenderGeneration += 1;
+  pdfDocument = null;
+  pdfPage = null;
+  pdfSourceKey = '';
+  pdfTileCache.clear();
+  pdfLayer.replaceChildren();
+  pdfLayer.hidden = true;
+}
+
+function trimPdfTileCache() {
+  while (pdfTileCache.size > 28) pdfTileCache.delete(pdfTileCache.keys().next().value);
+}
+
+async function ensurePdfPage(sourceKey) {
+  if (pdfSourceKey === sourceKey && pdfPage) return pdfPage;
+  clearPdfRenderer();
+  pdfSourceKey = sourceKey;
+  const pdfjs = await import('./assets/pdfjs/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = './assets/pdfjs/pdf.worker.mjs';
+  pdfDocument = await pdfjs.getDocument({ url: sourceKey, withCredentials: true, rangeChunkSize: 262144 }).promise;
+  pdfPage = await pdfDocument.getPage(1);
+  return pdfPage;
+}
+
+async function renderPdfTiles() {
+  const sourceKey = state.planFile?.previewType === 'application/pdf' ? apiUrl(state.planFile.previewUrl) : '';
+  if (!sourceKey || editorView.hidden) return;
+  const generation = ++pdfRenderGeneration;
+  try {
+    const page = await ensurePdfPage(sourceKey);
+    if (generation !== pdfRenderGeneration && pdfSourceKey !== sourceKey) return;
+    const frameWidth = sheetFrame.clientWidth;
+    const frameHeight = sheetFrame.clientHeight;
+    if (!frameWidth || !frameHeight) return;
+    const portrait = state.orientation === 'portrait';
+    const logicalWidth = portrait ? 297 : 420;
+    const logicalHeight = portrait ? 420 : 297;
+    const cssX = frameWidth / logicalWidth;
+    const cssY = frameHeight / logicalHeight;
+    const baseViewport = page.getViewport({ scale: 1 });
+    const fit = Math.min(330 / baseViewport.width, 240 / baseViewport.height);
+    const baseWidth = baseViewport.width * fit;
+    const baseHeight = baseViewport.height * fit;
+    const baseX = (330 - baseWidth) / 2;
+    const baseY = 15 + (240 - baseHeight) / 2;
+    const zoom = mapScale();
+    const logicalX = 150 + state.panX + zoom * (baseX - 150);
+    const logicalY = 135 + state.panY + zoom * (baseY - 135);
+    const displayWidth = baseWidth * zoom * cssX;
+    const displayHeight = baseHeight * zoom * cssY;
+    const left = logicalX * cssX;
+    const top = logicalY * cssY;
+    const visibleLeft = Math.max(0, -left);
+    const visibleTop = Math.max(0, -top);
+    const visibleRight = Math.min(displayWidth, frameWidth - left);
+    const visibleBottom = Math.min(displayHeight, frameHeight - top);
+    pdfLayer.hidden = false;
+    pdfLayer.replaceChildren();
+    if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) return;
+
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const renderScale = (displayWidth / baseViewport.width) * pixelRatio;
+    const viewport = page.getViewport({ scale: renderScale });
+    const tilePixels = 768;
+    const tileCss = tilePixels / pixelRatio;
+    const firstColumn = Math.floor(visibleLeft / tileCss);
+    const lastColumn = Math.floor((visibleRight - 0.01) / tileCss);
+    const firstRow = Math.floor(visibleTop / tileCss);
+    const lastRow = Math.floor((visibleBottom - 0.01) / tileCss);
+    const scaleKey = renderScale.toFixed(4);
+    const renders = [];
+    for (let row = firstRow; row <= lastRow; row += 1) {
+      for (let column = firstColumn; column <= lastColumn; column += 1) {
+        const tileX = column * tileCss;
+        const tileY = row * tileCss;
+        const cssWidth = Math.min(tileCss, displayWidth - tileX);
+        const cssHeight = Math.min(tileCss, displayHeight - tileY);
+        const key = `${sourceKey}|${scaleKey}|${column}|${row}`;
+        let canvas = pdfTileCache.get(key);
+        if (!canvas) {
+          canvas = document.createElement('canvas');
+          canvas.width = Math.ceil(cssWidth * pixelRatio);
+          canvas.height = Math.ceil(cssHeight * pixelRatio);
+          pdfTileCache.set(key, canvas);
+          const context = canvas.getContext('2d', { alpha: false });
+          renders.push(page.render({ canvasContext: context, viewport, transform: [1, 0, 0, 1, -Math.round(tileX * pixelRatio), -Math.round(tileY * pixelRatio)] }).promise);
+        } else {
+          pdfTileCache.delete(key);
+          pdfTileCache.set(key, canvas);
+        }
+        canvas.style.left = `${((left + tileX) / frameWidth) * 100}%`;
+        canvas.style.top = `${((top + tileY) / frameHeight) * 100}%`;
+        canvas.style.width = `${(cssWidth / frameWidth) * 100}%`;
+        canvas.style.height = `${(cssHeight / frameHeight) * 100}%`;
+        pdfLayer.append(canvas);
+      }
+    }
+    trimPdfTileCache();
+    await Promise.all(renders);
+    if (generation !== pdfRenderGeneration) queuePdfRender(0);
+  } catch (error) {
+    console.error('Affichage PDF impossible', error);
+    document.querySelector('#save-status').textContent = `Affichage PDF impossible : ${error.message}`;
+  }
+}
+
+function queuePdfRender(delay = 45) {
+  clearTimeout(pdfRenderTimer);
+  pdfRenderTimer = setTimeout(renderPdfTiles, delay);
 }
 
 function renderPlanPreview() {
   const previewPath = state.planFile?.previewUrl;
   if (!previewPath) {
+    clearPdfRenderer();
+    sheetBackground.setAttribute('fill', '#fff');
     planPreview.hidden = true;
     planPreview.removeAttribute('href');
     mockPlan.hidden = false;
     return;
   }
+  if (state.planFile.previewType === 'application/pdf') {
+    sheetBackground.setAttribute('fill', 'none');
+    planPreview.hidden = true;
+    planPreview.removeAttribute('href');
+    mockPlan.hidden = true;
+    queuePdfRender(0);
+    return;
+  }
+  clearPdfRenderer();
+  sheetBackground.setAttribute('fill', '#fff');
   planPreview.setAttribute('href', apiUrl(previewPath));
   planPreview.hidden = false;
   mockPlan.hidden = true;
@@ -947,7 +1080,8 @@ sheet.addEventListener('wheel', (event) => {
   const oldScale = mapScale();
   const mapX = 150 + (paperX - 150 - state.panX) / oldScale;
   const mapY = 135 + (paperY - 135 - state.panY) / oldScale;
-  state.planZoom = Math.max(50, Math.min(250, state.planZoom + (event.deltaY < 0 ? 10 : -10)));
+  const zoomStep = state.planZoom < 200 ? 25 : 50;
+  state.planZoom = Math.max(25, Math.min(800, state.planZoom + (event.deltaY < 0 ? zoomStep : -zoomStep)));
   const newScale = mapScale();
   state.panX = paperX - 150 - newScale * (mapX - 150);
   state.panY = paperY - 135 - newScale * (mapY - 135);
@@ -975,6 +1109,10 @@ sheet.addEventListener('pointerup', () => {
   document.querySelector('.canvas-area').classList.remove('panning');
   saveState();
 });
+
+new ResizeObserver(() => {
+  if (state.planFile?.previewType === 'application/pdf') queuePdfRender(80);
+}).observe(sheetFrame);
 document.querySelector('#circle-panel').addEventListener('change', updateComputedRadius);
 document.querySelector('#manual-radius').addEventListener('input', updateComputedRadius);
 document.querySelector('#signal-picker').addEventListener('click', (event) => {

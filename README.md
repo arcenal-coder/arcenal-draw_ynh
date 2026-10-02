@@ -6,7 +6,7 @@ Le POC permet de valider l'accueil, les bases réutilisables, la calibration, un
 
 La synthèse fonctionnelle complète se trouve dans `SPECIFICATION_POC.md`.
 
-Les PDF (première page), PNG, JPEG et DXF sont convertis en aperçu et réellement affichés dans la feuille. Les PDF et images suivent le parcours de calibration obligatoire. Le DWG utilise `dwg2dxf` de LibreDWG lorsqu'il est disponible sur le serveur ; sinon l'application renvoie une erreur explicite sans perdre le fichier original.
+Le PDF est le format de travail interne. Un PDF importé reste natif et est lu progressivement avec PDF.js, sans conversion PNG. Les DXF sont convertis en PDF vectoriel ; les DWG suivent la même chaîne après conversion par `dwg2dxf` lorsque LibreDWG est disponible. PNG et JPEG restent acceptés pour les plans scannés. Tous les originaux sont conservés.
 
 ## Socle serveur
 
@@ -27,7 +27,7 @@ Le répertoire constitue un paquet YunoHost v2 local. Depuis l'administration Yu
 sudo yunohost app install https://URL_DU_DEPOT_GIT --debug
 ```
 
-L'application installe Nginx, Gunicorn, Poppler, ezdxf, le service `arcenal_draw` et son répertoire de données sauvegardable. La conversion DWG LibreDWG est activée automatiquement lorsque l'exécutable `dwg2dxf` est présent.
+L'application installe Nginx, Gunicorn, PDF.js, ezdxf, librsvg, le service `arcenal_draw` et son répertoire de données sauvegardable. La conversion DWG LibreDWG est activée automatiquement lorsque l'exécutable `dwg2dxf` est présent.
 
 ## Vérifications locales
 

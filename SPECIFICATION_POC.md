@@ -113,7 +113,7 @@ Lorsque plusieurs zones radiologiques sont fusionnées, leurs surbalisages sont 
 
 ## Limites volontaires du POC
 
-- Le fond de plan importé est réellement affiché : première page des PDF, PNG/JPEG et rendu vectoriel des DXF. Le DWG requiert `dwg2dxf` de LibreDWG sur le serveur.
+- Le PDF est le fond de plan interne unique : les PDF natifs ne sont pas rasterisés ; les DXF et DWG sont convertis en PDF vectoriel avant affichage. Le lecteur charge uniquement les portions nécessaires au niveau de zoom demandé. PNG/JPEG restent disponibles pour les plans scannés. Le DWG requiert `dwg2dxf` de LibreDWG sur le serveur.
 - La conversion DWG/DXF est simulée.
 - La sélection graphique directe des deux points reste à ajouter ; la version actuelle demande la distance mesurée et la distance réelle dans la fenêtre de calibration.
 - Le stockage serveur, SQLite et le SSO YunoHost ne sont pas encore connectés.

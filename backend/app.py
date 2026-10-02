@@ -23,20 +23,38 @@ def response(start_response, status, payload=None, headers=None):
     return [body]
 
 
-def file_response(start_response, path, media_type):
+def file_response(environ, start_response, path, media_type):
     size = path.stat().st_size
-    start_response("200 OK", [
+    range_header = environ.get("HTTP_RANGE") or ""
+    match = re.fullmatch(r"bytes=(\d+)-(\d*)", range_header)
+    start, end, status = 0, size - 1, "200 OK"
+    if match:
+        start = int(match.group(1))
+        end = min(int(match.group(2)) if match.group(2) else size - 1, size - 1)
+        if start > end or start >= size:
+            start_response("416 Range Not Satisfiable", [("Content-Range", f"bytes */{size}"), ("Content-Length", "0")])
+            return []
+        status = "206 Partial Content"
+    length = end - start + 1
+    headers = [
         ("Content-Type", media_type),
-        ("Content-Length", str(size)),
+        ("Content-Length", str(length)),
+        ("Accept-Ranges", "bytes"),
         ("Cache-Control", "private, max-age=86400"),
         ("X-Content-Type-Options", "nosniff"),
-    ])
+    ]
+    if status.startswith("206"):
+        headers.append(("Content-Range", f"bytes {start}-{end}/{size}"))
+    start_response(status, headers)
     def chunks():
         with path.open("rb") as source:
-            while True:
-                chunk = source.read(1024 * 1024)
+            source.seek(start)
+            remaining = length
+            while remaining:
+                chunk = source.read(min(1024 * 1024, remaining))
                 if not chunk:
                     break
+                remaining -= len(chunk)
                 yield chunk
     return chunks()
 
@@ -133,7 +151,7 @@ def route(environ, start_response):
             preview, media_type = preview_file(preview_match.group(1))
         except FileNotFoundError:
             return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Aperçu introuvable."})
-        return file_response(start_response, preview, media_type)
+        return file_response(environ, start_response, preview, media_type)
 
     return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Route introuvable."})
 

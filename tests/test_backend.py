@@ -79,6 +79,25 @@ class BackendTest(unittest.TestCase):
         status, _ = self.call("GET", f"/api/imports/{result['id']}/preview")
         self.assertEqual(status, 200)
 
+    def test_pdf_is_kept_native_and_supports_byte_ranges(self):
+        content = b"%PDF-1.7\n" + b"0" * 128
+        status, result = self.call(
+            "POST",
+            "/api/imports",
+            raw=content,
+            headers={"HTTP_X_FILENAME": "grand-plan.pdf"},
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(result["previewType"], "application/pdf")
+        self.assertEqual(result["conversion"], "PDF natif")
+        status, preview = self.call(
+            "GET",
+            f"/api/imports/{result['id']}/preview",
+            headers={"HTTP_RANGE": "bytes=0-7"},
+        )
+        self.assertEqual(status, 206)
+        self.assertEqual(preview, b"%PDF-1.7")
+
 
 if __name__ == "__main__":
     unittest.main()
