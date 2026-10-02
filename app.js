@@ -12,6 +12,8 @@ const sheetFrame = document.querySelector('#sheet-frame');
 const sheetBackground = document.querySelector('#sheet-background');
 const sheetMargin = document.querySelector('#sheet-margin');
 const mapLayer = document.querySelector('#map-layer');
+const planPreview = document.querySelector('#plan-preview');
+const mockPlan = document.querySelector('#mock-plan');
 const overzoneLayer = document.querySelector('#overzone-layer');
 const zoneLayer = document.querySelector('#zone-layer');
 const impactLayer = document.querySelector('#impact-layer');
@@ -310,6 +312,19 @@ function updateMapTransform() {
   const scale = mapScale();
   mapLayer.setAttribute('transform', `translate(${150 + state.panX} ${135 + state.panY}) scale(${scale}) translate(-150 -135)`);
   document.querySelector('#plan-zoom-value').textContent = `${state.planZoom} %`;
+}
+
+function renderPlanPreview() {
+  const previewPath = state.planFile?.previewUrl;
+  if (!previewPath) {
+    planPreview.hidden = true;
+    planPreview.removeAttribute('href');
+    mockPlan.hidden = false;
+    return;
+  }
+  planPreview.setAttribute('href', apiUrl(previewPath));
+  planPreview.hidden = false;
+  mockPlan.hidden = true;
 }
 
 function niceScaleSegment(rawValue) {
@@ -717,6 +732,7 @@ function renderCalibrationStatus() {
 function renderAll() {
   setOrientation(state.orientation);
   updateMapTransform();
+  renderPlanPreview();
   renderCountPicker();
   renderInterventionForms();
   renderZones();
@@ -1110,6 +1126,7 @@ async function handlePlanFile(file) {
         headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) },
         body: file,
       });
+      document.querySelector('#save-status').textContent = `Plan converti avec ${pendingPlanImport.conversion}`;
     } catch (error) {
       document.querySelector('#save-status').textContent = error.message;
       return;

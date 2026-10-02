@@ -7,7 +7,7 @@ from http import HTTPStatus
 from urllib.parse import unquote
 
 from backend import db
-from backend.importer import ImportErrorSafe, convert_upload, store_upload
+from backend.importer import ImportErrorSafe, convert_upload, preview_file, store_upload
 
 
 MAX_JSON_BYTES = 12 * 1024 * 1024
@@ -21,6 +21,24 @@ def response(start_response, status, payload=None, headers=None):
     response_headers.extend(headers or [])
     start_response(f"{status.value} {status.phrase}", response_headers)
     return [body]
+
+
+def file_response(start_response, path, media_type):
+    size = path.stat().st_size
+    start_response("200 OK", [
+        ("Content-Type", media_type),
+        ("Content-Length", str(size)),
+        ("Cache-Control", "private, max-age=86400"),
+        ("X-Content-Type-Options", "nosniff"),
+    ])
+    def chunks():
+        with path.open("rb") as source:
+            while True:
+                chunk = source.read(1024 * 1024)
+                if not chunk:
+                    break
+                yield chunk
+    return chunks()
 
 
 def read_json(environ):
@@ -108,6 +126,14 @@ def route(environ, start_response):
         converted = convert_upload(upload)
         public = {key: value for key, value in converted.items() if key not in {"path", "convertedPath"}}
         return response(start_response, HTTPStatus.CREATED, public)
+
+    preview_match = re.fullmatch(r"/api/imports/([a-fA-F0-9]{32})/preview", path)
+    if preview_match and method == "GET":
+        try:
+            preview, media_type = preview_file(preview_match.group(1))
+        except FileNotFoundError:
+            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Aperçu introuvable."})
+        return file_response(start_response, preview, media_type)
 
     return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Route introuvable."})
 

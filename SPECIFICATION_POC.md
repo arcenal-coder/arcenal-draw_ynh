@@ -19,7 +19,7 @@ Le POC présente ce parcours, mais simule encore la conversion réelle du DWG/DX
 - Lecture automatique de l'unité déclarée quand elle est fiable.
 - Unité interne systématique : mètre.
 - Si l'unité est absente : calibration par deux points et saisie d'une distance réelle en mètres.
-- Pour un PDF ou une image, cette calibration est obligatoire à la première ouverture du document. Après conversion du document par le backend, l'utilisateur clique directement les deux points de référence sur le plan.
+- Pour un PDF ou une image, cette calibration est obligatoire à la première ouverture du document. Le fond réellement converti par le serveur est affiché dans la feuille ; la distance de référence est saisie dans la fenêtre de calibration et pourra être corrigée ultérieurement.
 - Recalibration ultérieure disponible.
 - Une modification de calibration ne modifie jamais rétroactivement un PDF déjà exporté.
 
@@ -113,7 +113,7 @@ Lorsque plusieurs zones radiologiques sont fusionnées, leurs surbalisages sont 
 
 ## Limites volontaires du POC
 
-- Le fond de plan est factice.
+- Le fond de plan importé est réellement affiché : première page des PDF, PNG/JPEG et rendu vectoriel des DXF. Le DWG requiert `dwg2dxf` de LibreDWG sur le serveur.
 - La conversion DWG/DXF est simulée.
-- La sélection graphique des deux points nécessite le fond de plan réellement produit par le futur service de conversion YunoHost ; le POC conserve temporairement la saisie de la distance mesurée.
+- La sélection graphique directe des deux points reste à ajouter ; la version actuelle demande la distance mesurée et la distance réelle dans la fenêtre de calibration.
 - Le stockage serveur, SQLite et le SSO YunoHost ne sont pas encore connectés.

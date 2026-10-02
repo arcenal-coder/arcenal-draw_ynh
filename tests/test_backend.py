@@ -35,7 +35,11 @@ class BackendTest(unittest.TestCase):
             captured["headers"] = dict(response_headers)
 
         response_body = b"".join(self.application(environ, start_response))
-        return int(captured["status"].split()[0]), json.loads(response_body or b"null")
+        try:
+            payload = json.loads(response_body or b"null")
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            payload = response_body
+        return int(captured["status"].split()[0]), payload
 
     def test_project_archive_and_listing(self):
         state = {"name": "Plan test", "location": "Atelier", "circles": [], "interventions": []}
@@ -62,6 +66,18 @@ class BackendTest(unittest.TestCase):
         )
         self.assertEqual(status, 400)
         self.assertIn("Format", result["error"])
+
+    def test_image_upload_produces_a_readable_preview(self):
+        status, result = self.call(
+            "POST",
+            "/api/imports",
+            raw=b"opaque-image-content",
+            headers={"HTTP_X_FILENAME": "plan.png"},
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(result["status"], "converted")
+        status, _ = self.call("GET", f"/api/imports/{result['id']}/preview")
+        self.assertEqual(status, 200)
 
 
 if __name__ == "__main__":
