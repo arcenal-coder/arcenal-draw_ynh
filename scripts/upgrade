@@ -12,7 +12,7 @@ ynh_safe_rm "$install_dir/backend"
 cp -a "$package_root/assets" "$install_dir/web/assets"
 mkdir -p "$install_dir/backend"
 cp -a "$package_root/backend/." "$install_dir/backend/"
-chown -R "$app:$app" "$install_dir" "$data_dir"
+set_runtime_permissions
 configure_files
 yunohost service add "$app" --description="Création de plans de contrôle gammagraphique" --log="systemd" || true
 ynh_systemctl --service="$app" --action="start" --log_path="systemd"

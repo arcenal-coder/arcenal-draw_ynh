@@ -11,8 +11,7 @@ cp "$package_root/index.html" "$package_root/app.js" "$package_root/styles.css" 
 cp -a "$package_root/assets" "$install_dir/web/assets"
 cp -a "$package_root/backend/." "$install_dir/backend/"
 
-chown -R "$app:$app" "$install_dir" "$data_dir"
-chmod 750 "$install_dir" "$install_dir/backend" "$data_dir" "$data_dir/uploads"
+set_runtime_permissions
 
 configure_files
 yunohost service add "$app" --description="Création de plans de contrôle gammagraphique" --log="systemd"
