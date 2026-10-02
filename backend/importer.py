@@ -203,7 +203,9 @@ def preview_file(upload_id):
     if not upload_id.isalnum() or len(upload_id) != 32:
         raise ImportErrorSafe("Identifiant d’import invalide.")
     directory = UPLOAD_DIR / upload_id
-    for name in ("plan.pdf", "original.pdf", "original.png", "original.jpg", "original.jpeg", "preview.svg", "preview.png"):
+    # Keep legacy previews ahead of original.pdf: projects saved before 0.3
+    # still declare an image preview. New native-PDF imports do not create one.
+    for name in ("plan.pdf", "preview.svg", "preview.png", "original.pdf", "original.png", "original.jpg", "original.jpeg"):
         candidate = directory / name
         if candidate.is_file():
             return candidate, mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"
