@@ -3,5 +3,5 @@ set -eu
 
 source /usr/share/yunohost/helpers
 
-ynh_backup --src_path="$data_dir" --is_big
-ynh_backup --src_path="$install_dir"
+ynh_backup "$install_dir"
+ynh_backup "$data_dir"
