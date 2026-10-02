@@ -18,5 +18,17 @@ class NginxConfigTests(unittest.TestCase):
         self.assertIn("proxy_set_header Remote-User $remote_user;", config)
 
 
+class SystemdConfigTests(unittest.TestCase):
+    def test_data_is_kept_outside_protected_home(self):
+        config = (ROOT / "conf" / "systemd.service").read_text(encoding="utf-8")
+        manifest = (ROOT / "manifest.toml").read_text(encoding="utf-8")
+
+        self.assertIn("ProtectHome=true", config)
+        self.assertNotIn("BindPaths=", config)
+        self.assertIn("ProtectSystem=strict", config)
+        self.assertIn("ReadWritePaths=__DATA_DIR__", config)
+        self.assertIn('dir = "/var/lib/__APP__"', manifest)
+
+
 if __name__ == "__main__":
     unittest.main()

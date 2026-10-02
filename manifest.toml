@@ -4,7 +4,7 @@ id = "arcenal_draw"
 name = "ARCenal DRAW"
 description.fr = "Création et archivage de plans de contrôle gammagraphique"
 description.en = "Create and archive gamma radiography control plans"
-version = "0.3.1~ynh1"
+version = "0.3.2~ynh1"
 maintainers = ["ARCenal"]
 
 [upstream]
@@ -39,6 +39,7 @@ ram.build = "100M"
     [resources.install_dir]
 
     [resources.data_dir]
+    dir = "/var/lib/__APP__"
 
     [resources.permissions]
         [resources.permissions.main]
