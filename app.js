@@ -25,6 +25,7 @@ const signalPanel = document.querySelector('#signal-panel');
 const canvasHint = document.querySelector('#canvas-hint');
 const calibrationDialog = document.querySelector('#calibration-dialog');
 const settingsDialog = document.querySelector('#settings-dialog');
+const importStatus = document.querySelector('#import-status');
 
 let activeTool = 'select';
 let selectedCircleIds = new Set();
@@ -1115,9 +1116,24 @@ document.querySelector('#manual-calibration').addEventListener('input', updateCa
 document.querySelector('#confirm-calibration').addEventListener('click', confirmCalibration);
 
 const fileInput = document.querySelector('#plan-file');
+function setImportStatus(message = '', stateName = '') {
+  importStatus.textContent = message;
+  if (stateName) importStatus.dataset.state = stateName;
+  else delete importStatus.dataset.state;
+}
+
 async function handlePlanFile(file) {
-  if (!file || !/\.(dwg|dxf|pdf|png|jpe?g)$/i.test(file.name)) return;
+  if (!file) return;
+  if (!/\.(dwg|dxf|pdf|png|jpe?g)$/i.test(file.name)) {
+    setImportStatus('Format refusé. Utilisez un fichier DWG, DXF, PDF, PNG ou JPEG.', 'error');
+    return;
+  }
+  if (file.size > 100 * 1024 * 1024) {
+    setImportStatus('Fichier trop volumineux : la limite est de 100 Mo.', 'error');
+    return;
+  }
   pendingPlanImport = null;
+  setImportStatus(`Import de « ${file.name} » en cours…`, 'busy');
   if (serverAvailable()) {
     document.querySelector('#save-status').textContent = 'Import du plan…';
     try {
@@ -1126,15 +1142,21 @@ async function handlePlanFile(file) {
         headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) },
         body: file,
       });
+      if (!pendingPlanImport.previewUrl) throw new Error('Le serveur utilise encore une ancienne version du moteur d’import. Mettez ARCenal DRAW à jour dans YunoHost.');
       document.querySelector('#save-status').textContent = `Plan converti avec ${pendingPlanImport.conversion}`;
+      setImportStatus('Plan converti. Vérifiez maintenant son échelle.', 'success');
     } catch (error) {
       document.querySelector('#save-status').textContent = error.message;
+      setImportStatus(`Échec de l’import : ${error.message}`, 'error');
       return;
     }
   }
   openCalibration(file.name);
 }
-fileInput.addEventListener('change', () => { if (fileInput.files[0]) handlePlanFile(fileInput.files[0]); });
+fileInput.addEventListener('change', async () => {
+  if (fileInput.files[0]) await handlePlanFile(fileInput.files[0]);
+  fileInput.value = '';
+});
 const dropZone = document.querySelector('#drop-zone');
 ['dragenter', 'dragover'].forEach((name) => dropZone.addEventListener(name, (event) => { event.preventDefault(); dropZone.classList.add('dragging'); }));
 ['dragleave', 'drop'].forEach((name) => dropZone.addEventListener(name, (event) => { event.preventDefault(); dropZone.classList.remove('dragging'); }));
