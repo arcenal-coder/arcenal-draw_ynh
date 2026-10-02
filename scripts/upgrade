@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+source /usr/share/yunohost/helpers
+source "$(dirname "$0")/_common.sh"
+
+package_root="$(cd "$(dirname "$0")/.." && pwd)"
+ynh_systemctl --service="$app" --action="stop" --log_path="systemd"
+cp "$package_root/index.html" "$package_root/app.js" "$package_root/styles.css" "$install_dir/web/"
+ynh_safe_rm "$install_dir/web/assets"
+ynh_safe_rm "$install_dir/backend"
+cp -a "$package_root/assets" "$install_dir/web/assets"
+mkdir -p "$install_dir/backend"
+cp -a "$package_root/backend/." "$install_dir/backend/"
+chown -R "$app:$app" "$install_dir" "$data_dir"
+configure_files
+yunohost service add "$app" --description="Création de plans de contrôle gammagraphique" --log="systemd" || true
+ynh_systemctl --service="$app" --action="start" --log_path="systemd"
+ynh_systemctl --service="nginx" --action="reload"

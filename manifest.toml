@@ -1,0 +1,53 @@
+packaging_format = 2
+
+id = "arcenal_draw"
+name = "ARCenal DRAW"
+description.fr = "Création et archivage de plans de contrôle gammagraphique"
+description.en = "Create and archive gamma radiography control plans"
+version = "0.1.0~ynh1"
+maintainers = ["ARCenal"]
+
+[upstream]
+license = "proprietary"
+
+[integration]
+yunohost = ">= 11.2"
+helpers_version = "2.1"
+architectures = ["amd64", "arm64"]
+multi_instance = false
+ldap = false
+sso = true
+disk = "250M"
+ram.build = "100M"
+ram.runtime = "150M"
+
+[install]
+    [install.domain]
+    type = "domain"
+
+    [install.path]
+    type = "path"
+    default = "/arcenal-draw"
+
+    [install.init_main_permission]
+    type = "group"
+    default = "visitors"
+
+[resources]
+    [resources.system_user]
+
+    [resources.install_dir]
+
+    [resources.data_dir]
+
+    [resources.permissions]
+        [resources.permissions.main]
+        url = "/"
+        auth_header = true
+
+    [resources.ports]
+        [resources.ports.main]
+        default = 8095
+
+    [resources.apt]
+    packages = "python3, gunicorn, poppler-utils"

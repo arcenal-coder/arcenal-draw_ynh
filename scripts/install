@@ -1,0 +1,22 @@
+#!/bin/bash
+set -eu
+
+source /usr/share/yunohost/helpers
+source "$(dirname "$0")/_common.sh"
+
+package_root="$(cd "$(dirname "$0")/.." && pwd)"
+
+mkdir -p "$install_dir/web" "$install_dir/backend" "$data_dir/uploads"
+cp "$package_root/index.html" "$package_root/app.js" "$package_root/styles.css" "$install_dir/web/"
+cp -a "$package_root/assets" "$install_dir/web/assets"
+cp -a "$package_root/backend/." "$install_dir/backend/"
+
+chown -R "$app:$app" "$install_dir" "$data_dir"
+chmod 750 "$install_dir" "$install_dir/backend" "$data_dir" "$data_dir/uploads"
+
+configure_files
+yunohost service add "$app" --description="Création de plans de contrôle gammagraphique" --log="systemd"
+ynh_systemctl --service="$app" --action="start" --log_path="systemd"
+ynh_systemctl --service="nginx" --action="reload"
+
+ynh_script_progression --message="ARCenal DRAW est installé." --last

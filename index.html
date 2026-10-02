@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>ARCenal DRAW — POC fonctionnel</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
+  </head>
+  <body>
+    <section id="home-view" class="home-view">
+      <header class="home-header">
+        <div class="brand-mark">A</div>
+        <div><strong>ARCenal DRAW</strong><span>Plans techniques &amp; annotations radiologiques</span></div>
+      </header>
+      <main class="home-content">
+        <div class="home-intro">
+          <p class="eyebrow">PREUVE DE CONCEPT</p>
+          <h1>Ouvrir, calibrer, annoter, exporter.</h1>
+          <p>Réutilisez une base existante ou déposez un nouveau plan AutoCAD. Le fichier original reste intact.</p>
+        </div>
+        <label class="drop-zone" id="drop-zone">
+          <input id="plan-file" type="file" accept=".dwg,.dxf,.pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden />
+          <span class="drop-icon">＋</span>
+          <strong>Déposer un plan DWG, DXF, PDF ou image</strong>
+          <span>ou cliquer pour choisir un fichier</span>
+          <small>PDF et images seront calibrés en mètres à la première ouverture.</small>
+        </label>
+        <section class="library-section">
+          <div class="section-heading"><div><p class="eyebrow">PROJETS</p><h2>Reprendre le travail</h2></div><span>Sauvegarde locale automatique</span></div>
+          <div class="card-grid" id="recent-projects"></div>
+        </section>
+        <section class="library-section">
+          <div class="section-heading"><div><p class="eyebrow">ARCHIVES PDF</p><h2>Exports enregistrés</h2></div><span>Copies conservées dans l’application</span></div>
+          <div class="card-grid" id="export-archives"></div>
+        </section>
+        <section class="library-section">
+          <div class="section-heading"><div><p class="eyebrow">BASES DE PLANS</p><h2>Plans déjà exploitables</h2></div></div>
+          <div class="card-grid">
+            <article class="plan-card"><div class="plan-thumb thumb-u662"><span>U 662</span></div><div class="plan-card-body"><strong>Unité U662 — Rack 600</strong><span>DWG converti · mètres · calibré</span><button data-open-base="Unité U662 — Rack 600">Créer un projet</button></div></article>
+            <article class="plan-card"><div class="plan-thumb thumb-d11"><span>D 11</span></div><div class="plan-card-body"><strong>Bâtiment D11</strong><span>DXF converti · millimètres · calibré</span><button data-open-base="Bâtiment D11">Créer un projet</button></div></article>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <section id="editor-view" class="editor-view" hidden>
+      <header class="app-header">
+        <button class="icon-button" id="back-home" title="Retour à l'accueil" aria-label="Retour à l'accueil">←</button>
+        <div class="project-heading"><strong id="project-name">Plan de balisage — U662</strong><span id="save-status">Enregistré</span></div>
+        <div class="header-actions">
+          <label>Orientation<select id="orientation-select"><option value="landscape">A3 paysage</option><option value="portrait">A3 portrait</option></select></label>
+          <label>Zoom du plan<input id="plan-zoom" type="range" min="50" max="250" step="10" value="100" /><output id="plan-zoom-value">100 %</output></label>
+          <button class="secondary" id="recalibrate-button">Recalibrer</button>
+          <button class="secondary" id="settings-button">⚙ Paramètres</button>
+          <button class="primary" id="export-button">Exporter PDF</button>
+        </div>
+      </header>
+      <main class="workspace">
+        <nav class="toolbar" aria-label="Outils">
+          <button class="tool active" data-tool="select" title="Sélection" aria-label="Outil Sélection"><span aria-hidden="true">↖</span><small>Sélection</small></button>
+          <button class="tool" data-tool="circle" title="Créer un point d’impact" aria-label="Créer un point d’impact"><span aria-hidden="true">◎</span><small>Impact</small></button>
+          <button class="tool" data-tool="signal" title="Signalisation" aria-label="Placer un équipement de signalisation"><span aria-hidden="true">⚑</span><small>Signal</small></button>
+          <button class="tool" data-tool="measure" title="Mesure" aria-label="Outil de mesure"><span aria-hidden="true">↔</span><small>Mesure</small></button>
+          <button class="tool delete-tool" id="delete-selection" title="Supprimer la sélection" aria-label="Supprimer la sélection"><span aria-hidden="true">🗑</span><small>Supprimer</small></button>
+        </nav>
+        <section class="canvas-area" aria-label="Feuille de plan">
+          <div class="sheet-frame" id="sheet-frame">
+            <svg id="sheet" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 297" role="img" aria-label="Feuille A3 paysage">
+              <defs>
+                <clipPath id="impact-image-clip"><circle r="2" /></clipPath>
+                <g id="impact-symbol">
+                  <path d="M0-1.2C-1.2-1.9-1.8-3.3-1.5-4.5C.4-4.8 2.2-3.8 2.8-1.9C2.1-1.1 1.1-.6 0-1.2Z"/><path d="M1 .7C2.2.1 3.7.3 4.5 1.2C3.9 3 2.1 4.1.3 3.7C-.1 2.7.2 1.6 1 .7Z"/><path d="M-1 .7C-.2 1.6.1 2.7-.3 3.7C-2.1 4.1-3.9 3-4.5 1.2C-3.7.3-2.2.1-1 .7Z"/><circle r=".95"/><circle r=".34" fill="#ffd84a"/>
+                </g>
+              </defs>
+              <rect id="sheet-background" width="420" height="297" fill="#fff"/>
+              <rect id="sheet-margin" x="10" y="10" width="400" height="277" fill="none" stroke="#cbd2d7" stroke-width=".35"/>
+              <g id="map-layer">
+                <g id="mock-plan" fill="none" stroke="#76838b" stroke-width=".55">
+                  <path d="M22 34H190V56H259V202H228V244H42V219H22Z"/><path d="M42 54H104V89H164V54H190M42 112H91V154H151V112H224M104 34V89M164 56V112M91 154V244M151 154V244"/><path d="M31 206L224 67M62 39L211 226M35 137L229 196" stroke="#b8c0c5" stroke-width=".3"/><path d="M51 70h36m-18-18v36M180 92h46m-23-16v32M50 187h53m-26-16v32" stroke="#a8b2b9" stroke-dasharray="2 1.4"/><rect x="113" y="101" width="38" height="31" fill="#f1f3f4"/><circle cx="190" cy="151" r="15" fill="#f1f3f4"/>
+                  <g fill="#687780" stroke="none" font-family="Arial" font-size="3.4"><text x="45" y="47">UNITÉ U662 — FOND DE PLAN NORMALISÉ</text><text x="119" y="119">ZONE TECHNIQUE</text><text x="48" y="214">RACK 600</text><text x="192" y="187">U 642</text></g>
+                </g>
+                <g id="overzone-layer"></g><g id="zone-layer"></g><g id="impact-layer"></g><g id="signal-layer"></g>
+              </g>
+              <g id="title-block"></g>
+            </svg>
+          </div>
+          <div class="canvas-hint" id="canvas-hint">Sélectionnez un outil.</div>
+        </section>
+        <aside class="inspector">
+          <section id="circle-panel" class="panel tool-panel" hidden>
+            <p class="eyebrow">NOUVELLE ZONE</p><h2>Placer un point d’impact</h2><p>Choisissez l’intervention et le type de balisage, puis cliquez sur le point d’impact.</p>
+            <div id="circle-interventions" class="radio-list"></div>
+            <fieldset class="threshold-options"><legend>Type de balisage</legend><label><input type="radio" name="threshold" value="2.5" checked /> 2,5 µSv/h</label><label><input type="radio" name="threshold" value="25" /> 25 µSv sur 1 h</label><label><input type="radio" name="threshold" value="manual" /> Réglage manuel</label></fieldset>
+            <label id="manual-radius-row" hidden>Rayon demandé par le client, en mètres<input id="manual-radius" type="number" min="0.1" step="0.1" value="20" /></label>
+            <label class="check-row" id="circle-attenuation-row"><input id="circle-attenuation" type="checkbox" checked /> Atténuation 1/250</label>
+            <div class="computed-radius">Rayon calculé <strong id="computed-radius">—</strong></div>
+          </section>
+          <section id="selection-panel" class="panel tool-panel">
+            <p class="eyebrow">SÉLECTION</p><h2>Zones de balisage</h2><p id="selection-message">Cliquez sur les cercles pour les sélectionner.</p>
+            <label id="reassign-zone-row" hidden>Attribuer à une société / équipe<select id="reassign-intervention"></select></label>
+            <button class="wide-action" id="merge-button" disabled hidden>Fusionner les zones</button><button class="wide-action secondary-action" id="split-button" disabled hidden>Dissocier les zones</button>
+          </section>
+          <section id="signal-panel" class="panel tool-panel" hidden>
+            <p class="eyebrow">SIGNALEMENT</p><h2>Placer un équipement</h2><p>Choisissez un symbole, puis cliquez sur le plan.</p>
+            <div class="signal-picker" id="signal-picker">
+              <button type="button" class="active" data-signal="roadblock"><img class="signal-preview" src="assets/panneau-interdiction.png" alt="" /><small>Panneau interdit</small></button>
+              <button type="button" data-signal="beacon"><img class="signal-preview" src="assets/gyrophare-orange.png" alt="" /><small>Balisage flash</small></button>
+              <button type="button" data-signal="barrier"><img class="signal-preview" src="assets/barriere-chantier.png" alt="" /><small>Barrière</small></button>
+              <button type="button" data-signal="cone"><img class="signal-preview" src="assets/cone-signalisation.png" alt="" /><small>Cône</small></button>
+            </div>
+          </section>
+          <dialog id="settings-dialog" class="settings-dialog">
+          <section id="settings-panel" class="panel">
+            <div class="settings-modal-header"><div><p class="eyebrow">PARAMÈTRES</p><h2>Document et affichage</h2></div><button id="settings-close" type="button" aria-label="Fermer les paramètres">✕ Fermer</button></div>
+            <div class="settings-grid">
+              <label class="full">Apparence<select id="settings-theme"><option value="system">Système</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
+              <label>Orientation<select id="settings-orientation"><option value="landscape">A3 paysage</option><option value="portrait">A3 portrait</option></select></label>
+              <label>Marge papier<input id="settings-margin" type="number" min="5" max="20" step="1" value="5" /></label>
+              <label class="full">Zoom réel du plan<input id="settings-zoom" type="range" min="50" max="250" step="10" /></label>
+              <label>Transparence des zones<select id="settings-opacity"><option value="0">0 %</option><option value="25">25 %</option><option value="50">50 %</option><option value="75">75 %</option></select></label>
+              <label class="check-row"><input id="settings-labels" type="checkbox" checked /> Codes A–E visibles</label>
+            </div>
+            <div class="settings-actions"><button class="secondary" id="settings-recenter" type="button">Recentrer le plan</button><button class="secondary" id="settings-recalibrate" type="button">Recalibrer</button></div>
+            <p class="settings-calibration" id="settings-calibration-status"></p>
+            <h2 class="settings-subtitle">Réalisation du plan</h2>
+            <div class="settings-grid">
+              <label>Nom et prénom<input id="author-name" type="text" placeholder="Nom Prénom" /></label>
+              <label>Fonction<input id="author-role" type="text" placeholder="Fonction" /></label>
+            </div>
+            <label class="signature-drop" id="author-signature-drop"><input id="author-signature-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer la signature</strong><small>PDF, PNG ou JPEG</small></label>
+            <div class="signature-file" id="author-signature-preview" hidden><span>✓</span><strong></strong><button type="button" data-remove-signature="author">Retirer</button></div>
+            <label class="validator-toggle check-row"><input id="validator-enabled" type="checkbox" /> Ajouter un encas « Validé par »</label>
+            <div id="validator-settings" hidden>
+              <div class="settings-grid"><label>Nom et prénom<input id="validator-name" type="text" placeholder="Nom Prénom" /></label><label>Fonction<input id="validator-role" type="text" placeholder="Fonction" /></label></div>
+              <label class="signature-drop" id="validator-signature-drop"><input id="validator-signature-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer la signature de validation</strong><small>PDF, PNG ou JPEG</small></label>
+              <div class="signature-file" id="validator-signature-preview" hidden><span>✓</span><strong></strong><button type="button" data-remove-signature="validator">Retirer</button></div>
+            </div>
+            <h2 class="settings-subtitle">Client et logo</h2><p>Le logo et l’intitulé du client apparaîtront librement au-dessus du cartouche, alignés sur son montant gauche.</p>
+            <div class="settings-grid"><label class="full">Intitulé du client<input id="client-name" type="text" placeholder="Nom du client" /></label></div>
+            <label class="logo-drop" id="logo-drop"><input id="logo-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer un PDF, PNG ou JPEG</strong><small>ou cliquer pour choisir</small></label>
+            <div id="logo-preview" class="logo-preview" hidden><img alt="Aperçu du logo" /><div><strong id="logo-name"></strong><small id="logo-status"></small></div></div>
+            <button class="wide-action secondary-action" id="remove-logo" type="button" disabled>Retirer le logo</button>
+          </section>
+          </dialog>
+          <section class="panel interventions-panel">
+            <div class="panel-heading"><div><p class="eyebrow">CARTOUCHE</p><h2>Interventions</h2></div><div class="count-picker" id="count-picker" aria-label="Nombre d'interventions"></div></div>
+            <p>Une couleur, une société et une source par intervention.</p><label class="plan-date-field">Date du plan<input id="plan-date" type="date" /></label><label class="plan-location-field">Localisation<input id="plan-location" type="text" placeholder="Localisation de l’intervention" /></label><div id="intervention-forms"></div>
+          </section>
+        </aside>
+      </main>
+      <footer class="status-bar"><span id="unit-status">Unité interne : mètre</span><span id="calibration-status">Calibration : 1 unité = 1 m</span><span>Feuille = PDF</span></footer>
+    </section>
+
+    <dialog id="calibration-dialog">
+      <form method="dialog" id="calibration-form">
+        <p class="eyebrow">CALIBRATION</p><h2>Vérifier l’échelle du plan</h2><p id="calibration-file">Le fichier ne fournit pas d’unité fiable.</p>
+        <label>Unité déclarée dans le fichier<select id="source-unit"><option value="unknown">Non définie</option><option value="m">Mètre</option><option value="mm">Millimètre</option></select></label>
+        <div id="manual-calibration"><p>La calibration définit deux points sur le plan, puis leur distance réelle en mètres. Dans ce POC sans moteur de conversion serveur, renseignez encore la distance mesurée entre ces deux points ; la version YunoHost permettra de les cliquer directement sur le document converti.</p><div class="form-row"><label>Distance entre les deux points<input id="native-distance" type="number" min="0.0001" step="any" value="12500" /></label><label>Distance réelle en mètres<input id="real-distance" type="number" min="0.0001" step="any" value="12.5" /></label></div></div>
+        <output id="calibration-result">1 000 unités = 1 m</output>
+        <div class="dialog-actions"><button value="cancel" class="secondary">Annuler</button><button value="confirm" class="primary" id="confirm-calibration">Valider la calibration</button></div>
+      </form>
+    </dialog>
+    <script src="app.js"></script>
+  </body>
+</html>
