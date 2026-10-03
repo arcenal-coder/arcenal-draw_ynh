@@ -18,6 +18,7 @@ const overzoneLayer = document.querySelector('#overzone-layer');
 const zoneLayer = document.querySelector('#zone-layer');
 const impactLayer = document.querySelector('#impact-layer');
 const signalLayer = document.querySelector('#signal-layer');
+const measurementLayer = document.querySelector('#measurement-layer');
 const titleBlock = document.querySelector('#title-block');
 const circlePanel = document.querySelector('#circle-panel');
 const selectionPanel = document.querySelector('#selection-panel');
@@ -32,7 +33,9 @@ let selectedCircleIds = new Set();
 let selectedMergeIds = new Set();
 let selectedSignalIds = new Set();
 let selectedOverzoneKeys = new Set();
+let selectedMeasurementIds = new Set();
 let selectedSignalType = 'roadblock';
+let pendingMeasurementPoint = null;
 let pendingFileName = '';
 let pendingPlanImport = null;
 let panSession = null;
@@ -50,7 +53,7 @@ function uid(prefix) {
 
 function defaultIntervention(index) {
   const examples = [
-    { company: 'INEXCO', isotope: 'Ir-192', activity: 40, unit: 'Ci' },
+    { company: 'Société 1', isotope: 'Ir-192', activity: 40, unit: 'Ci' },
     { company: 'Société 2', isotope: 'Se-75', activity: 30, unit: 'Ci' },
     { company: 'Société 3', isotope: 'Ir-192', activity: 0.7, unit: 'TBq' },
     { company: 'Société 4', isotope: 'Se-75', activity: 0.5, unit: 'TBq' },
@@ -85,6 +88,7 @@ function freshState(name = 'Plan de balisage — U662') {
     circles: [],
     merges: [],
     signals: [],
+    measurements: [],
     suppressedOverzones: [],
     updatedAt: new Date().toISOString(),
   };
@@ -232,6 +236,7 @@ async function refreshServerLibrary() {
 
 function openEditor() {
   state.signals ||= [];
+  state.measurements ||= [];
   state.projectId ||= uid('project');
   state.panX ||= 0;
   state.panY ||= 0;
@@ -261,6 +266,8 @@ function openEditor() {
   selectedMergeIds.clear();
   selectedSignalIds.clear();
   selectedOverzoneKeys.clear();
+  selectedMeasurementIds.clear();
+  pendingMeasurementPoint = null;
   document.querySelector('#project-name').textContent = state.name;
   document.querySelector('#orientation-select').value = state.orientation;
   document.querySelector('#plan-zoom').value = state.planZoom;
@@ -302,6 +309,10 @@ function setOrientation(orientation) {
   sheetMargin.setAttribute('y', state.sheetMargin);
   sheetMargin.setAttribute('width', width - state.sheetMargin * 2);
   sheetMargin.setAttribute('height', height - state.sheetMargin * 2);
+  planPreview.setAttribute('x', 0);
+  planPreview.setAttribute('y', 0);
+  planPreview.setAttribute('width', width);
+  planPreview.setAttribute('height', height);
   sheetFrame.classList.toggle('portrait', portrait);
   sheetFrame.style.setProperty('--sheet-width', `${width}mm`);
   sheetFrame.style.setProperty('--sheet-height', `${height}mm`);
@@ -364,11 +375,11 @@ async function renderPdfTiles() {
     const cssX = frameWidth / logicalWidth;
     const cssY = frameHeight / logicalHeight;
     const baseViewport = page.getViewport({ scale: 1 });
-    const fit = Math.min(330 / baseViewport.width, 240 / baseViewport.height);
+    const fit = Math.min(logicalWidth / baseViewport.width, logicalHeight / baseViewport.height);
     const baseWidth = baseViewport.width * fit;
     const baseHeight = baseViewport.height * fit;
-    const baseX = (330 - baseWidth) / 2;
-    const baseY = 15 + (240 - baseHeight) / 2;
+    const baseX = (logicalWidth - baseWidth) / 2;
+    const baseY = (logicalHeight - baseHeight) / 2;
     const zoom = mapScale();
     const logicalX = 150 + state.panX + zoom * (baseX - 150);
     const logicalY = 135 + state.panY + zoom * (baseY - 135);
@@ -672,6 +683,7 @@ function renderZones() {
     impactLayer.append(marker);
   });
   renderSignals();
+  renderMeasurements();
   updateSelectionPanel();
 }
 
@@ -695,6 +707,44 @@ function renderSignals() {
   });
 }
 
+function measurementDistance(measurement) {
+  const nativeDistance = Math.hypot(measurement.x2 - measurement.x1, measurement.y2 - measurement.y1);
+  return nativeDistance * (Number(state.calibration?.metersPerNativeUnit) || 1);
+}
+
+function renderMeasurements() {
+  measurementLayer.replaceChildren();
+  (state.measurements || []).forEach((measurement) => {
+    const midpointX = (measurement.x1 + measurement.x2) / 2;
+    const midpointY = (measurement.y1 + measurement.y2) / 2;
+    const label = formatDistance(measurementDistance(measurement));
+    const labelWidth = Math.max(18, label.length * 2.4 + 5);
+    const element = document.createElementNS(NS, 'g');
+    element.setAttribute('class', `measurement-item${selectedMeasurementIds.has(measurement.id) ? ' selected' : ''}`);
+    element.dataset.measurementId = measurement.id;
+    element.innerHTML = `<line x1="${measurement.x1}" y1="${measurement.y1}" x2="${measurement.x2}" y2="${measurement.y2}"/><circle class="measurement-end" cx="${measurement.x1}" cy="${measurement.y1}" r="1.2"/><circle class="measurement-end" cx="${measurement.x2}" cy="${measurement.y2}" r="1.2"/><g class="measurement-label" transform="translate(${midpointX} ${midpointY}) scale(${1 / mapScale()})"><rect x="${-labelWidth / 2}" y="-3.8" width="${labelWidth}" height="7.6" rx="1.5"/><text y="1.25">${label}</text></g>`;
+    element.addEventListener('click', selectMeasurement);
+    measurementLayer.append(element);
+  });
+  if (pendingMeasurementPoint) {
+    const anchor = document.createElementNS(NS, 'circle');
+    anchor.setAttribute('class', 'measurement-anchor');
+    anchor.setAttribute('cx', pendingMeasurementPoint.x);
+    anchor.setAttribute('cy', pendingMeasurementPoint.y);
+    anchor.setAttribute('r', 2);
+    measurementLayer.append(anchor);
+  }
+}
+
+function selectMeasurement(event) {
+  event.stopPropagation();
+  if (activeTool !== 'select') return;
+  const id = event.currentTarget.dataset.measurementId;
+  selectedCircleIds.clear(); selectedMergeIds.clear(); selectedSignalIds.clear(); selectedOverzoneKeys.clear();
+  if (selectedMeasurementIds.has(id)) selectedMeasurementIds.delete(id); else selectedMeasurementIds.add(id);
+  renderZones();
+}
+
 function selectCircle(event) {
   event.stopPropagation();
   if (activeTool === 'circle') { placeCircle(event); return; }
@@ -703,6 +753,7 @@ function selectCircle(event) {
   selectedMergeIds.clear();
   selectedSignalIds.clear();
   selectedOverzoneKeys.clear();
+  selectedMeasurementIds.clear();
   if (selectedCircleIds.has(id)) selectedCircleIds.delete(id); else selectedCircleIds.add(id);
   renderZones();
 }
@@ -715,6 +766,7 @@ function selectMergedZone(event) {
   selectedCircleIds.clear();
   selectedSignalIds.clear();
   selectedOverzoneKeys.clear();
+  selectedMeasurementIds.clear();
   if (selectedMergeIds.has(id)) selectedMergeIds.delete(id); else selectedMergeIds.add(id);
   renderZones();
 }
@@ -727,6 +779,7 @@ function selectSignal(event) {
   selectedCircleIds.clear();
   selectedMergeIds.clear();
   selectedOverzoneKeys.clear();
+  selectedMeasurementIds.clear();
   if (selectedSignalIds.has(id)) selectedSignalIds.delete(id); else selectedSignalIds.add(id);
   renderZones();
 }
@@ -736,7 +789,7 @@ function selectImpact(event) {
   if (activeTool !== 'select') return;
   const ids = event.currentTarget.dataset.circleIds.split(',');
   const mergeIds = state.merges.filter((merge) => merge.circleIds.some((id) => ids.includes(id))).map((merge) => merge.id);
-  selectedCircleIds.clear(); selectedMergeIds.clear(); selectedSignalIds.clear(); selectedOverzoneKeys.clear();
+  selectedCircleIds.clear(); selectedMergeIds.clear(); selectedSignalIds.clear(); selectedOverzoneKeys.clear(); selectedMeasurementIds.clear();
   if (mergeIds.length) mergeIds.forEach((id) => selectedMergeIds.add(id));
   else ids.forEach((id) => selectedCircleIds.add(id));
   renderZones();
@@ -746,7 +799,7 @@ function selectOverzone(event) {
   event.stopPropagation();
   if (activeTool !== 'select') return;
   const key = event.currentTarget.dataset.overzoneKey;
-  selectedCircleIds.clear(); selectedMergeIds.clear(); selectedSignalIds.clear();
+  selectedCircleIds.clear(); selectedMergeIds.clear(); selectedSignalIds.clear(); selectedMeasurementIds.clear();
   if (selectedOverzoneKeys.has(key)) selectedOverzoneKeys.delete(key); else selectedOverzoneKeys.add(key);
   renderZones();
 }
@@ -756,10 +809,11 @@ function updateSelectionPanel(message = '') {
   const mergeCount = selectedMergeIds.size;
   const signalCount = selectedSignalIds.size;
   const overzoneCount = selectedOverzoneKeys.size;
-  const hasSelection = count + mergeCount + signalCount + overzoneCount > 0;
+  const measurementCount = selectedMeasurementIds.size;
+  const hasSelection = count + mergeCount + signalCount + overzoneCount + measurementCount > 0;
   const selectionMessage = document.querySelector('#selection-message');
   selectionMessage.hidden = !hasSelection;
-  selectionMessage.textContent = message || (count ? `${count} zone(s) sélectionnée(s).` : mergeCount ? `${mergeCount} zone(s) fusionnée(s) sélectionnée(s).` : signalCount ? `${signalCount} équipement(s) sélectionné(s).` : overzoneCount ? `${overzoneCount} surbalisage(s) sélectionné(s).` : '');
+  selectionMessage.textContent = message || (count ? `${count} zone(s) sélectionnée(s).` : mergeCount ? `${mergeCount} zone(s) fusionnée(s) sélectionnée(s).` : signalCount ? `${signalCount} équipement(s) sélectionné(s).` : overzoneCount ? `${overzoneCount} surbalisage(s) sélectionné(s).` : measurementCount ? `${measurementCount} mesure(s) sélectionnée(s).` : '');
   const interventions = new Set([...selectedCircleIds].map((id) => circleById(id)?.interventionId));
   const mergeButton = document.querySelector('#merge-button');
   const splitButton = document.querySelector('#split-button');
@@ -767,7 +821,7 @@ function updateSelectionPanel(message = '') {
   mergeButton.hidden = mergeButton.disabled;
   splitButton.disabled = mergeCount === 0;
   splitButton.hidden = splitButton.disabled;
-  document.querySelector('#delete-selection').disabled = count + mergeCount + signalCount + overzoneCount === 0;
+  document.querySelector('#delete-selection').disabled = count + mergeCount + signalCount + overzoneCount + measurementCount === 0;
   const assignmentRow = document.querySelector('#reassign-zone-row');
   assignmentRow.hidden = count + mergeCount === 0;
   if (!assignmentRow.hidden) {
@@ -876,13 +930,15 @@ function renderAll() {
 }
 
 function setTool(tool) {
+  if (tool !== 'measure') pendingMeasurementPoint = null;
   activeTool = tool;
   document.querySelectorAll('.tool').forEach((button) => button.classList.toggle('active', button.dataset.tool === tool));
   circlePanel.hidden = tool !== 'circle';
   selectionPanel.hidden = tool !== 'select';
   signalPanel.hidden = tool !== 'signal';
   document.querySelector('.canvas-area').classList.toggle('can-pan', tool === 'select');
-  canvasHint.textContent = tool === 'circle' ? 'Cliquez sur le point d’impact dans le plan.' : tool === 'signal' ? 'Cliquez pour placer l’équipement de signalisation.' : tool === 'measure' ? 'Outil de mesure présenté dans l’itération suivante.' : 'Glissez le fond pour le déplacer. La molette règle son zoom.';
+  canvasHint.textContent = tool === 'circle' ? 'Cliquez sur le point d’impact dans le plan.' : tool === 'signal' ? 'Cliquez pour placer l’équipement de signalisation.' : tool === 'measure' ? 'Cliquez sur le premier point de la mesure.' : 'Glissez le fond pour le déplacer. La molette règle son zoom.';
+  renderMeasurements();
 }
 
 function openSettings() {
@@ -922,9 +978,27 @@ function placeSignal(event) {
   saveState();
 }
 
+function placeMeasurement(event) {
+  if (activeTool !== 'measure' || event.target.closest('#title-block')) return;
+  const point = svgPointFromEvent(event);
+  if (!pendingMeasurementPoint) {
+    pendingMeasurementPoint = point;
+    canvasHint.textContent = 'Cliquez sur le second point de la mesure.';
+    renderMeasurements();
+    return;
+  }
+  if (Math.hypot(point.x - pendingMeasurementPoint.x, point.y - pendingMeasurementPoint.y) < 0.01) return;
+  state.measurements.push({ id: uid('measurement'), x1: pendingMeasurementPoint.x, y1: pendingMeasurementPoint.y, x2: point.x, y2: point.y });
+  pendingMeasurementPoint = null;
+  canvasHint.textContent = 'Mesure ajoutée. Cliquez pour commencer une nouvelle mesure.';
+  renderZones();
+  saveState();
+}
+
 function handleSheetClick(event) {
   if (activeTool === 'circle') placeCircle(event);
   if (activeTool === 'signal') placeSignal(event);
+  if (activeTool === 'measure') placeMeasurement(event);
 }
 
 function renderLogoSettings() {
@@ -1090,7 +1164,7 @@ sheet.addEventListener('wheel', (event) => {
   updateMapTransform(); renderZones(); renderTitleBlock(); saveState();
 }, { passive: false });
 sheet.addEventListener('pointerdown', (event) => {
-  if (activeTool !== 'select' || event.button !== 0 || event.target.closest('.zone-circle,.merged-zone,.overzone-circle,.signal-item,.impact-marker,#title-block')) return;
+  if (activeTool !== 'select' || event.button !== 0 || event.target.closest('.zone-circle,.merged-zone,.overzone-circle,.signal-item,.measurement-item,.impact-marker,#title-block')) return;
   const box = sheet.getBoundingClientRect();
   const viewBox = sheet.viewBox.baseVal;
   panSession = { x: event.clientX, y: event.clientY, panX: state.panX, panY: state.panY, ratioX: viewBox.width / box.width, ratioY: viewBox.height / box.height };
@@ -1127,16 +1201,17 @@ function deleteSelection() {
   state.circles = state.circles.filter((circle) => !selectedCircleIds.has(circle.id) && !mergedCircleIds.has(circle.id));
   state.merges = state.merges.filter((merge) => !selectedMergeIds.has(merge.id) && !merge.circleIds.some((id) => selectedCircleIds.has(id)));
   state.signals = state.signals.filter((signal) => !selectedSignalIds.has(signal.id));
+  state.measurements = (state.measurements || []).filter((measurement) => !selectedMeasurementIds.has(measurement.id));
   selectedOverzoneKeys.forEach((key) => {
     if (!state.suppressedOverzones.includes(key)) state.suppressedOverzones.push(key);
   });
-  selectedCircleIds.clear(); selectedMergeIds.clear(); selectedSignalIds.clear(); selectedOverzoneKeys.clear();
+  selectedCircleIds.clear(); selectedMergeIds.clear(); selectedSignalIds.clear(); selectedOverzoneKeys.clear(); selectedMeasurementIds.clear();
   renderZones(); renderTitleBlock(); saveState();
 }
 document.querySelector('#delete-selection').addEventListener('click', deleteSelection);
 document.addEventListener('keydown', (event) => {
   if (!['Backspace', 'Delete'].includes(event.key) || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
-  if (selectedCircleIds.size + selectedMergeIds.size + selectedSignalIds.size + selectedOverzoneKeys.size === 0) return;
+  if (selectedCircleIds.size + selectedMergeIds.size + selectedSignalIds.size + selectedOverzoneKeys.size + selectedMeasurementIds.size === 0) return;
   event.preventDefault();
   deleteSelection();
 });
