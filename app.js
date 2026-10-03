@@ -436,29 +436,34 @@ function queuePdfRender(delay = 45) {
   pdfRenderTimer = setTimeout(renderPdfTiles, delay);
 }
 
+function setSvgVisible(element, visible) {
+  element.hidden = !visible;
+  element.style.display = visible ? '' : 'none';
+}
+
 function renderPlanPreview() {
   const previewPath = state.planFile?.previewUrl;
   if (!previewPath) {
     clearPdfRenderer();
     sheetBackground.setAttribute('fill', '#fff');
-    planPreview.hidden = true;
+    setSvgVisible(planPreview, false);
     planPreview.removeAttribute('href');
-    mockPlan.hidden = false;
+    setSvgVisible(mockPlan, true);
     return;
   }
   if (state.planFile.previewType === 'application/pdf') {
     sheetBackground.setAttribute('fill', 'none');
-    planPreview.hidden = true;
+    setSvgVisible(planPreview, false);
     planPreview.removeAttribute('href');
-    mockPlan.hidden = true;
+    setSvgVisible(mockPlan, false);
     queuePdfRender(0);
     return;
   }
   clearPdfRenderer();
   sheetBackground.setAttribute('fill', '#fff');
   planPreview.setAttribute('href', apiUrl(previewPath));
-  planPreview.hidden = false;
-  mockPlan.hidden = true;
+  setSvgVisible(planPreview, true);
+  setSvgVisible(mockPlan, false);
 }
 
 function niceScaleSegment(rawValue) {

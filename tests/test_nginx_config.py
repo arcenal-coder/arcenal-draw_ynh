@@ -24,6 +24,12 @@ class NginxConfigTests(unittest.TestCase):
         self.assertTrue((ROOT / "assets" / "pdfjs" / "pdf.worker.js").is_file())
         self.assertNotIn(".mjs", app)
 
+    def test_imported_plan_explicitly_hides_svg_demo(self):
+        app = (ROOT / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function setSvgVisible(element, visible)", app)
+        self.assertGreaterEqual(app.count("setSvgVisible(mockPlan, false)"), 2)
+
 
 class SystemdConfigTests(unittest.TestCase):
     def test_data_is_kept_outside_protected_home(self):
