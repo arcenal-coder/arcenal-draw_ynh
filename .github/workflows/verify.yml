@@ -31,8 +31,11 @@ jobs:
           tar --extract --xz --file /tmp/libredwg.tar.xz --directory /tmp/libredwg-source --strip-components=1
           cd /tmp/libredwg-source
           ./configure --prefix=/tmp/libredwg-install --disable-bindings --disable-python --disable-json --disable-dependency-tracking --disable-werror CFLAGS="-O2 -w"
-          make --silent -j2
-          make --silent install
+          make --silent -C src -j2
+          make --silent -C programs -j2 dwg2dxf
+          make --silent -C src install
+          install -d /tmp/libredwg-install/bin
+          install -m 755 programs/.libs/dwg2dxf /tmp/libredwg-install/bin/dwg2dxf
           /tmp/libredwg-install/bin/dwg2dxf --version
       - name: Exécuter le linter YunoHost
         # ARCenal DRAW est publié dans le catalogue privé ARCenal. Le linter

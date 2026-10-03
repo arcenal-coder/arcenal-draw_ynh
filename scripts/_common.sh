@@ -16,8 +16,11 @@ install_libredwg() {
             --disable-dependency-tracking \
             --disable-werror \
             CFLAGS="-O2 -w"
-        make --silent -j2
-        make --silent install
+        make --silent -C src -j2
+        make --silent -C programs -j2 dwg2dxf
+        make --silent -C src install
+        install -d "$install_dir/libredwg/bin"
+        install -m 755 programs/.libs/dwg2dxf "$install_dir/libredwg/bin/dwg2dxf"
     )
     ynh_safe_rm "$build_dir"
     test -x "$install_dir/libredwg/bin/dwg2dxf"
