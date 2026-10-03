@@ -14,7 +14,6 @@ const sheetBackground = document.querySelector('#sheet-background');
 const sheetMargin = document.querySelector('#sheet-margin');
 const mapLayer = document.querySelector('#map-layer');
 const planPreview = document.querySelector('#plan-preview');
-const mockPlan = document.querySelector('#mock-plan');
 const overzoneLayer = document.querySelector('#overzone-layer');
 const zoneLayer = document.querySelector('#zone-layer');
 const impactLayer = document.querySelector('#impact-layer');
@@ -448,14 +447,12 @@ function renderPlanPreview() {
     sheetBackground.setAttribute('fill', '#fff');
     setSvgVisible(planPreview, false);
     planPreview.removeAttribute('href');
-    setSvgVisible(mockPlan, true);
     return;
   }
   if (state.planFile.previewType === 'application/pdf') {
     sheetBackground.setAttribute('fill', 'none');
     setSvgVisible(planPreview, false);
     planPreview.removeAttribute('href');
-    setSvgVisible(mockPlan, false);
     queuePdfRender(0);
     return;
   }
@@ -463,7 +460,6 @@ function renderPlanPreview() {
   sheetBackground.setAttribute('fill', '#fff');
   planPreview.setAttribute('href', apiUrl(previewPath));
   setSvgVisible(planPreview, true);
-  setSvgVisible(mockPlan, false);
 }
 
 function niceScaleSegment(rawValue) {

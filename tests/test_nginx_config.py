@@ -24,11 +24,13 @@ class NginxConfigTests(unittest.TestCase):
         self.assertTrue((ROOT / "assets" / "pdfjs" / "pdf.worker.js").is_file())
         self.assertNotIn(".mjs", app)
 
-    def test_imported_plan_explicitly_hides_svg_demo(self):
+    def test_demo_plan_is_not_shipped(self):
         app = (ROOT / "app.js").read_text(encoding="utf-8")
+        page = (ROOT / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("function setSvgVisible(element, visible)", app)
-        self.assertGreaterEqual(app.count("setSvgVisible(mockPlan, false)"), 2)
+        self.assertNotIn("mockPlan", app)
+        self.assertNotIn('id="mock-plan"', page)
+        self.assertNotIn("FOND DE PLAN NORMALISÉ", page)
 
 
 class SystemdConfigTests(unittest.TestCase):
