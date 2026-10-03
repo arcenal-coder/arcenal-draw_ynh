@@ -342,8 +342,8 @@ async function ensurePdfPage(sourceKey) {
   if (pdfSourceKey === sourceKey && pdfPage) return pdfPage;
   clearPdfRenderer();
   pdfSourceKey = sourceKey;
-  const pdfjs = await import('./assets/pdfjs/pdf.mjs');
-  pdfjs.GlobalWorkerOptions.workerSrc = './assets/pdfjs/pdf.worker.mjs';
+  const pdfjs = await import('./assets/pdfjs/pdf.js');
+  pdfjs.GlobalWorkerOptions.workerSrc = './assets/pdfjs/pdf.worker.js';
   pdfDocument = await pdfjs.getDocument({ url: sourceKey, withCredentials: true, rangeChunkSize: 262144 }).promise;
   pdfPage = await pdfDocument.getPage(1);
   return pdfPage;

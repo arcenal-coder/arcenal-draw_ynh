@@ -17,11 +17,12 @@ class NginxConfigTests(unittest.TestCase):
 
         self.assertIn("proxy_set_header Remote-User $remote_user;", config)
 
-    def test_pdfjs_modules_are_served_as_javascript(self):
-        config = (ROOT / "conf" / "nginx.conf").read_text(encoding="utf-8")
+    def test_pdfjs_uses_standard_javascript_extensions(self):
+        app = (ROOT / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn("location __PATH__/assets/pdfjs/", config)
-        self.assertIn("application/javascript mjs;", config)
+        self.assertTrue((ROOT / "assets" / "pdfjs" / "pdf.js").is_file())
+        self.assertTrue((ROOT / "assets" / "pdfjs" / "pdf.worker.js").is_file())
+        self.assertNotIn(".mjs", app)
 
 
 class SystemdConfigTests(unittest.TestCase):
