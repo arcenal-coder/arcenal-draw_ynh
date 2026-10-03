@@ -17,6 +17,12 @@ class NginxConfigTests(unittest.TestCase):
 
         self.assertIn("proxy_set_header Remote-User $remote_user;", config)
 
+    def test_pdfjs_modules_are_served_as_javascript(self):
+        config = (ROOT / "conf" / "nginx.conf").read_text(encoding="utf-8")
+
+        self.assertIn("location __PATH__/assets/pdfjs/", config)
+        self.assertIn("application/javascript mjs;", config)
+
 
 class SystemdConfigTests(unittest.TestCase):
     def test_data_is_kept_outside_protected_home(self):
