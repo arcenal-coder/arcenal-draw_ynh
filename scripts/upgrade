@@ -12,6 +12,8 @@ ynh_safe_rm "$install_dir/backend"
 cp -a "$package_root/assets" "$install_dir/web/assets"
 mkdir -p "$install_dir/backend"
 cp -a "$package_root/backend/." "$install_dir/backend/"
+ynh_safe_rm "$install_dir/libredwg"
+install_libredwg
 set_runtime_permissions
 configure_files
 yunohost service add "$app" --description="Création de plans de contrôle gammagraphique" --log="systemd" || true

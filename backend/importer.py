@@ -181,7 +181,8 @@ def convert_upload(upload):
     if extension == ".pdf":
         return _preview_result(upload, source, "application/pdf", "PDF natif")
     if extension == ".dwg":
-        executable = shutil.which("dwg2dxf")
+        configured_executable = os.environ.get("ARCENAL_DWG2DXF", "")
+        executable = configured_executable if configured_executable and os.access(configured_executable, os.X_OK) else shutil.which("dwg2dxf")
         if not executable:
             raise ImportErrorSafe("Le moteur DWG LibreDWG (dwg2dxf) n’est pas disponible sur ce serveur YunoHost.")
         source_dxf = source.with_name("converted.dxf")

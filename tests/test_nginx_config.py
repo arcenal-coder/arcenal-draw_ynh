@@ -44,6 +44,21 @@ class SystemdConfigTests(unittest.TestCase):
         self.assertIn("ReadWritePaths=__DATA_DIR__", config)
         self.assertIn('dir = "/var/lib/__APP__"', manifest)
 
+    def test_libredwg_is_installed_and_exposed_to_the_service(self):
+        config = (ROOT / "conf" / "systemd.service").read_text(encoding="utf-8")
+        manifest = (ROOT / "manifest.toml").read_text(encoding="utf-8")
+        common = (ROOT / "scripts" / "_common.sh").read_text(encoding="utf-8")
+        install = (ROOT / "scripts" / "install").read_text(encoding="utf-8")
+        upgrade = (ROOT / "scripts" / "upgrade").read_text(encoding="utf-8")
+
+        self.assertIn("libredwg-0.13.3.tar.xz", manifest)
+        self.assertIn("83f1f6e78a744777a481ff4520e4cef3f8ac4b2c1c25671077ca12fe81e8816e", manifest)
+        self.assertIn("ynh_setup_source", common)
+        self.assertIn("test -x \"$install_dir/libredwg/bin/dwg2dxf\"", common)
+        self.assertIn("install_libredwg", install)
+        self.assertIn("install_libredwg", upgrade)
+        self.assertIn("ARCENAL_DWG2DXF=__INSTALL_DIR__/libredwg/bin/dwg2dxf", config)
+
 
 if __name__ == "__main__":
     unittest.main()

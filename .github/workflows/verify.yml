@@ -21,6 +21,19 @@ jobs:
           python -m py_compile backend/*.py
           python -m unittest discover -s tests -v
           bash -n scripts/*
+      - name: Compiler le moteur DWG embarqué
+        run: |
+          curl --fail --location --silent --show-error \
+            https://ftp.gnu.org/gnu/libredwg/libredwg-0.13.3.tar.xz \
+            --output /tmp/libredwg.tar.xz
+          echo "83f1f6e78a744777a481ff4520e4cef3f8ac4b2c1c25671077ca12fe81e8816e  /tmp/libredwg.tar.xz" | sha256sum --check
+          mkdir /tmp/libredwg-source
+          tar --extract --xz --file /tmp/libredwg.tar.xz --directory /tmp/libredwg-source --strip-components=1
+          cd /tmp/libredwg-source
+          ./configure --prefix=/tmp/libredwg-install --disable-bindings --disable-python --disable-json --disable-dependency-tracking --disable-werror CFLAGS="-O2 -w"
+          make --silent -j2
+          make --silent install
+          /tmp/libredwg-install/bin/dwg2dxf --version
       - name: Exécuter le linter YunoHost
         # ARCenal DRAW est publié dans le catalogue privé ARCenal. Le linter
         # officiel retourne donc une erreur attendue « absente du catalogue

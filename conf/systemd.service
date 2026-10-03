@@ -10,6 +10,7 @@ WorkingDirectory=__INSTALL_DIR__
 Environment=PYTHONPATH=__INSTALL_DIR__
 Environment=ARCENAL_DB_PATH=__DATA_DIR__/arcenal.sqlite3
 Environment=ARCENAL_UPLOAD_DIR=__DATA_DIR__/uploads
+Environment=ARCENAL_DWG2DXF=__INSTALL_DIR__/libredwg/bin/dwg2dxf
 ExecStart=/usr/bin/gunicorn --workers 2 --threads 2 --timeout 300 --bind 127.0.0.1:__PORT__ backend.app:application
 Restart=on-failure
 RestartSec=3

@@ -10,6 +10,7 @@ mkdir -p "$install_dir/web" "$install_dir/backend" "$data_dir/uploads"
 cp "$package_root/index.html" "$package_root/app.js" "$package_root/styles.css" "$install_dir/web/"
 cp -a "$package_root/assets" "$install_dir/web/assets"
 cp -a "$package_root/backend/." "$install_dir/backend/"
+install_libredwg
 
 set_runtime_permissions
 
