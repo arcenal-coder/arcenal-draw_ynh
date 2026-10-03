@@ -13,6 +13,7 @@ install_libredwg() {
             --disable-bindings \
             --disable-python \
             --disable-json \
+            --enable-debug \
             --disable-dependency-tracking \
             --disable-werror \
             CFLAGS="-O2 -w"

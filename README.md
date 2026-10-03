@@ -6,7 +6,7 @@ Le POC permet de valider l'accueil, les bases réutilisables, la calibration, un
 
 La synthèse fonctionnelle complète se trouve dans `SPECIFICATION_POC.md`.
 
-Le PDF est le format de travail interne. Un PDF importé reste natif et est lu progressivement avec PDF.js, sans conversion PNG. Les DXF sont convertis en PDF vectoriel ; les DWG suivent la même chaîne après conversion par `dwg2dxf`. PNG et JPEG restent acceptés pour les plans scannés. Tous les originaux sont conservés.
+Le PDF est le format de travail interne. Un PDF importé reste natif et est lu progressivement avec PDF.js, sans conversion PNG. Les DXF sont convertis en PDF vectoriel ; les DWG suivent la même chaîne après conversion géométrique minimale par `dwg2dxf`. Les matériaux, styles de tableaux et autres objets AutoCAD décoratifs instables n'empêchent pas l'import lorsqu'un DXF exploitable a bien été produit. PNG et JPEG restent acceptés pour les plans scannés. Tous les originaux sont conservés.
 
 ## Socle serveur
 

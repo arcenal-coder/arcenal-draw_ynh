@@ -65,6 +65,24 @@ def _run(command, label, timeout=120):
         raise ImportErrorSafe(f"{label} impossible : {detail[:240]}") from error
 
 
+def _convert_dwg(executable, source, output, timeout=120):
+    output.unlink(missing_ok=True)
+    try:
+        result = subprocess.run(
+            [executable, "--minimal", "--overwrite", "--file", str(output), str(source)],
+            check=False,
+            timeout=timeout,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError) as error:
+        raise ImportErrorSafe(f"Conversion DWG impossible : {str(error)[:240]}") from error
+    if not output.is_file() or output.stat().st_size == 0:
+        detail = result.stderr or result.stdout or f"code de sortie {result.returncode}"
+        raise ImportErrorSafe(f"Conversion DWG impossible : {detail[:240]}")
+    return result.returncode != 0
+
+
 def _points_from_entity(entity):
     kind = entity.dxftype()
     if kind == "LINE":
@@ -186,7 +204,7 @@ def convert_upload(upload):
         if not executable:
             raise ImportErrorSafe("Le moteur DWG LibreDWG (dwg2dxf) n’est pas disponible sur ce serveur YunoHost.")
         source_dxf = source.with_name("converted.dxf")
-        _run([executable, "-o", str(source_dxf), str(source)], "Conversion DWG")
+        _convert_dwg(executable, source, source_dxf)
     else:
         source_dxf = source
     preview = source.with_name("preview.svg")
@@ -197,7 +215,7 @@ def convert_upload(upload):
     pdf = source.with_name("plan.pdf")
     _run([executable, "-f", "pdf", "-o", str(pdf), str(preview)], "Conversion en PDF vectoriel")
     preview.unlink(missing_ok=True)
-    return _preview_result(upload, pdf, "application/pdf", "LibreDWG + PDF vectoriel" if extension == ".dwg" else "DXF + PDF vectoriel")
+    return _preview_result(upload, pdf, "application/pdf", "LibreDWG géométrique + PDF vectoriel" if extension == ".dwg" else "DXF + PDF vectoriel")
 
 
 def preview_file(upload_id):

@@ -30,7 +30,7 @@ jobs:
           mkdir /tmp/libredwg-source
           tar --extract --xz --file /tmp/libredwg.tar.xz --directory /tmp/libredwg-source --strip-components=1
           cd /tmp/libredwg-source
-          ./configure --prefix=/tmp/libredwg-install --disable-bindings --disable-python --disable-json --disable-dependency-tracking --disable-werror CFLAGS="-O2 -w"
+          ./configure --prefix=/tmp/libredwg-install --disable-bindings --disable-python --disable-json --enable-debug --disable-dependency-tracking --disable-werror CFLAGS="-O2 -w"
           make --silent -C src -j2
           make --silent -C programs -j2 dwg2dxf
           make --silent -C src install

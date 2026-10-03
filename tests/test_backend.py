@@ -4,7 +4,8 @@ import json
 import os
 import tempfile
 import unittest
-
+from pathlib import Path
+from unittest import mock
 
 class BackendTest(unittest.TestCase):
     @classmethod
@@ -97,6 +98,34 @@ class BackendTest(unittest.TestCase):
         )
         self.assertEqual(status, 206)
         self.assertEqual(preview, b"%PDF-1.7")
+
+    def test_dwg_warnings_are_accepted_when_a_dxf_is_produced(self):
+        from backend import importer
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "plan.dwg"
+            output = Path(directory) / "plan.dxf"
+            source.write_bytes(b"DWG")
+
+            def produce_dxf(*_args, **_kwargs):
+                output.write_text("0\nSECTION\n0\nEOF\n", encoding="ascii")
+                return mock.Mock(returncode=1, stderr="Warning: Unstable Class MATERIAL", stdout="")
+
+            with mock.patch("backend.importer.subprocess.run", side_effect=produce_dxf):
+                self.assertTrue(importer._convert_dwg("dwg2dxf", source, output))
+
+    def test_dwg_failure_remains_blocking_without_output(self):
+        from backend import importer
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "plan.dwg"
+            output = Path(directory) / "plan.dxf"
+            source.write_bytes(b"DWG")
+            result = mock.Mock(returncode=1, stderr="READ ERROR", stdout="")
+
+            with mock.patch("backend.importer.subprocess.run", return_value=result):
+                with self.assertRaises(importer.ImportErrorSafe):
+                    importer._convert_dwg("dwg2dxf", source, output)
 
 
 if __name__ == "__main__":
