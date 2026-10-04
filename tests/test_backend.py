@@ -111,8 +111,11 @@ class BackendTest(unittest.TestCase):
                 output.write_text("0\nSECTION\n0\nEOF\n", encoding="ascii")
                 return mock.Mock(returncode=1, stderr="Warning: Unstable Class MATERIAL", stdout="")
 
-            with mock.patch("backend.importer.subprocess.run", side_effect=produce_dxf):
+            with mock.patch("backend.importer.subprocess.run", side_effect=produce_dxf) as run:
                 self.assertTrue(importer._convert_dwg("dwg2dxf", source, output))
+                command = run.call_args.args[0]
+                self.assertIn("--overwrite", command)
+                self.assertNotIn("--minimal", command)
 
     def test_dwg_failure_remains_blocking_without_output(self):
         from backend import importer
@@ -126,6 +129,18 @@ class BackendTest(unittest.TestCase):
             with mock.patch("backend.importer.subprocess.run", return_value=result):
                 with self.assertRaises(importer.ImportErrorSafe):
                     importer._convert_dwg("dwg2dxf", source, output)
+
+    def test_missing_block_reference_does_not_stop_other_entities(self):
+        from backend import importer
+
+        broken_insert = mock.Mock()
+        broken_insert.dxftype.return_value = "INSERT"
+        broken_insert.virtual_entities.side_effect = RuntimeError('Required block definition for "*X" does not exist.')
+        valid_line = mock.Mock()
+        valid_line.dxftype.return_value = "LINE"
+
+        entities = list(importer._expanded_entities([broken_insert, valid_line]))
+        self.assertEqual(entities, [broken_insert, valid_line])
 
 
 if __name__ == "__main__":

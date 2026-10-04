@@ -69,7 +69,7 @@ def _convert_dwg(executable, source, output, timeout=120):
     output.unlink(missing_ok=True)
     try:
         result = subprocess.run(
-            [executable, "--minimal", "--overwrite", "--file", str(output), str(source)],
+            [executable, "--overwrite", "--file", str(output), str(source)],
             check=False,
             timeout=timeout,
             capture_output=True,
@@ -111,7 +111,7 @@ def _expanded_entities(layout):
             try:
                 pending[0:0] = list(entity.virtual_entities())
                 continue
-            except (AttributeError, TypeError, ValueError):
+            except Exception:
                 pass
         yield entity
 
