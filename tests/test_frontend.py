@@ -62,6 +62,14 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("showTitleBlock: true", javascript)
         self.assertIn("titleBlock.style.display = state.showTitleBlock ? '' : 'none'", javascript)
 
+    def test_title_block_omits_visible_team_count_and_zoom_has_step_buttons(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertNotIn("Équipes visibles", javascript)
+        self.assertIn('id="zoom-out"', markup)
+        self.assertIn('id="zoom-in"', markup)
+        self.assertIn("function changePlanZoom(delta)", javascript)
+
 
 if __name__ == "__main__":
     unittest.main()

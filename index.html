@@ -68,7 +68,7 @@
         <div class="project-heading"><strong id="project-name">Plan de balisage — U662</strong><span id="save-status">Enregistré</span></div>
         <div class="header-actions">
           <label>Orientation<select id="orientation-select"><option value="landscape">A3 paysage</option><option value="portrait">A3 portrait</option></select></label>
-          <label>Zoom du plan<input id="plan-zoom" type="range" min="25" max="800" step="25" value="100" /><output id="plan-zoom-value">100 %</output></label>
+          <label>Zoom du plan<span class="zoom-control"><button id="zoom-out" type="button" aria-label="Réduire le zoom">−</button><input id="plan-zoom" type="range" min="25" max="800" step="25" value="100" /><button id="zoom-in" type="button" aria-label="Augmenter le zoom">+</button></span><output id="plan-zoom-value">100 %</output></label>
           <button class="secondary" id="recalibrate-button">Recalibrer</button>
           <button class="secondary" id="settings-button">⚙ Paramètres</button>
           <button class="primary" id="export-button">Exporter PDF</button>

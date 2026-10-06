@@ -610,7 +610,7 @@ function renderTitleBlock() {
   const peopleRows = personRowMarkup('Réalisé par', state.author, peopleY, width) + (state.validatorEnabled ? personRowMarkup('Validé par', state.validator, peopleY + 15, width) : '');
   const clientLabel = escapeText(state.client || 'CLIENT');
   const logoMarkup = state.logo?.dataUrl ? `<g transform="translate(0 -19)"><image href="${state.logo.dataUrl}" x="0" y="0" width="24" height="16" preserveAspectRatio="xMinYMid meet"/><text x="28" y="10" font-size="3.4" font-weight="700">${clientLabel}</text></g>` : state.logo?.type === 'application/pdf' ? `<g transform="translate(0 -19)"><text x="0" y="7" font-size="2.4" font-weight="700">LOGO PDF</text><text x="28" y="7" font-size="3.4" font-weight="700">${clientLabel}</text></g>` : state.client ? `<text x="0" y="-7" font-size="3.4" font-weight="700">${clientLabel}</text>` : '';
-  titleBlock.innerHTML = `${logoMarkup}<rect width="${width}" height="${height}" fill="#fff" stroke="#17212b" stroke-width=".65"/><rect width="${width}" height="13" fill="#edf1f3" stroke="#17212b" stroke-width=".65"/><path d="M0 22H${width}M0 31H${width}" stroke="#17212b" stroke-width=".32"/><text x="3" y="5" font-size="2.4" fill="#65747d">ARCENAL DRAW</text><text x="${width / 2}" y="9.5" text-anchor="middle" font-size="3.15" font-weight="700">PLAN DE CONTRÔLE GAMMAGRAPHIQUE</text><text x="3" y="19" font-size="2.6">Date : ${displayDate}</text><text x="79" y="19" text-anchor="end" font-size="2.35" font-weight="700">Équipes visibles : ${count}</text><text x="3" y="28" font-size="2.6">Localisation : ${escapeText(state.location || '—')}</text>${rows}<g transform="translate(3 ${headerHeight + rowHeight * count + 4})"><text x="0" y="-1.2" font-size="2.35">Échelle graphique — mètres</text>${bars}<text x="0" y="8" font-size="2.2">0</text><text x="${scaleTotal / 2 - 2}" y="8" font-size="2.2">${segmentMeters * 2}</text><text x="${scaleTotal - 2}" y="8" font-size="2.2">${segmentMeters * 4} m</text></g>${peopleRows}`;
+  titleBlock.innerHTML = `${logoMarkup}<rect width="${width}" height="${height}" fill="#fff" stroke="#17212b" stroke-width=".65"/><rect width="${width}" height="13" fill="#edf1f3" stroke="#17212b" stroke-width=".65"/><path d="M0 22H${width}M0 31H${width}" stroke="#17212b" stroke-width=".32"/><text x="3" y="5" font-size="2.4" fill="#65747d">ARCENAL DRAW</text><text x="${width / 2}" y="9.5" text-anchor="middle" font-size="3.15" font-weight="700">PLAN DE CONTRÔLE GAMMAGRAPHIQUE</text><text x="3" y="19" font-size="2.6">Date : ${displayDate}</text><text x="3" y="28" font-size="2.6">Localisation : ${escapeText(state.location || '—')}</text>${rows}<g transform="translate(3 ${headerHeight + rowHeight * count + 4})"><text x="0" y="-1.2" font-size="2.35">Échelle graphique — mètres</text>${bars}<text x="0" y="8" font-size="2.2">0</text><text x="${scaleTotal / 2 - 2}" y="8" font-size="2.2">${segmentMeters * 2}</text><text x="${scaleTotal - 2}" y="8" font-size="2.2">${segmentMeters * 4} m</text></g>${peopleRows}`;
 }
 
 function renderCountPicker() {
@@ -1192,6 +1192,13 @@ document.querySelectorAll('[data-open-base]').forEach((button) => button.addEven
 document.querySelector('#back-home').addEventListener('click', openHome);
 document.querySelector('#orientation-select').addEventListener('change', (event) => { setOrientation(event.target.value); saveState(); });
 document.querySelector('#plan-zoom').addEventListener('input', (event) => { state.planZoom = Number(event.target.value); updateMapTransform(); renderZones(); renderTitleBlock(); saveState(); });
+function changePlanZoom(delta) {
+  const control = document.querySelector('#plan-zoom');
+  control.value = Math.max(Number(control.min), Math.min(Number(control.max), Number(control.value) + delta));
+  control.dispatchEvent(new Event('input', { bubbles: true }));
+}
+document.querySelector('#zoom-out').addEventListener('click', () => changePlanZoom(-25));
+document.querySelector('#zoom-in').addEventListener('click', () => changePlanZoom(25));
 document.querySelectorAll('.tool[data-tool]').forEach((button) => button.addEventListener('click', () => setTool(button.dataset.tool)));
 document.querySelector('#settings-button').addEventListener('click', openSettings);
 document.querySelector('#settings-close').addEventListener('click', () => settingsDialog.close());
