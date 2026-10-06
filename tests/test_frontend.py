@@ -23,6 +23,7 @@ class FrontendTests(unittest.TestCase):
         self.assertIn('accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"', markup)
         self.assertIn("Format refusé. Utilisez un fichier PDF, PNG ou JPEG.", javascript)
         self.assertIn('id="plan-preview"', markup)
+        self.assertIn("function fallbackToOriginalPdf()", javascript)
 
     def test_measurements_are_persisted_and_use_calibration(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")

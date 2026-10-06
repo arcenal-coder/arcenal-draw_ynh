@@ -7,7 +7,7 @@ from http import HTTPStatus
 from urllib.parse import unquote
 
 from backend import db
-from backend.importer import ImportErrorSafe, convert_upload, preview_file, store_upload
+from backend.importer import ImportErrorSafe, convert_upload, original_file, preview_file, store_upload
 
 
 MAX_JSON_BYTES = 12 * 1024 * 1024
@@ -152,6 +152,14 @@ def route(environ, start_response):
         except FileNotFoundError:
             return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Aperçu introuvable."})
         return file_response(environ, start_response, preview, media_type)
+
+    original_match = re.fullmatch(r"/api/imports/([a-fA-F0-9]{32})/original", path)
+    if original_match and method == "GET":
+        try:
+            original, media_type = original_file(original_match.group(1))
+        except FileNotFoundError:
+            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Original introuvable."})
+        return file_response(environ, start_response, original, media_type)
 
     return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Route introuvable."})
 

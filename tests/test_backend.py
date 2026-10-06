@@ -84,6 +84,7 @@ class BackendTest(unittest.TestCase):
                 self.assertEqual(status, 201)
                 self.assertEqual(result["previewType"], media_type)
                 self.assertEqual(result["conversion"], "Image native optimisée")
+                self.assertTrue(result["originalUrl"].endswith("/original"))
 
     def test_pdf_is_kept_native_and_supports_byte_ranges(self):
         content = b"%PDF-1.7\n" + b"0" * 128
@@ -136,10 +137,25 @@ class BackendTest(unittest.TestCase):
             source.write_bytes(b"%PDF-1.7\n")
 
             def write_vector_svg(*_args, **_kwargs):
-                output.write_text("<svg>" + "<path d='M0 0L1 1'/>" * 20 + "</svg>", encoding="utf-8")
+                output.write_text("<svg width='842' height='595'>" + "<path d='M0 0L1 1'/>" * 20 + "</svg>", encoding="utf-8")
 
             with mock.patch("backend.importer.shutil.which", return_value="pdftocairo"), mock.patch("backend.importer.subprocess.run", side_effect=write_vector_svg):
                 self.assertTrue(importer._convert_pdf_to_svg(source, output))
+
+    def test_empty_svg_falls_back_to_the_original_pdf(self):
+        from backend import importer
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "original.pdf"
+            output = Path(directory) / "preview.svg"
+            source.write_bytes(b"%PDF-1.7\n")
+
+            def write_empty_svg(*_args, **_kwargs):
+                output.write_text("<svg width='0' height='0'><path d='M0 0'/></svg>", encoding="utf-8")
+
+            with mock.patch("backend.importer.shutil.which", return_value="pdftocairo"), mock.patch("backend.importer.subprocess.run", side_effect=write_empty_svg):
+                self.assertFalse(importer._convert_pdf_to_svg(source, output))
+                self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":

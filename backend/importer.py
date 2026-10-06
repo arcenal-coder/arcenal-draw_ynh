@@ -1,6 +1,7 @@
 import hashlib
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import uuid
@@ -74,6 +75,7 @@ def _preview_result(upload, preview, media_type, conversion):
         "preview": preview.name,
         "previewType": media_type,
         "previewUrl": f"imports/{upload['id']}/preview",
+        "originalUrl": f"imports/{upload['id']}/original",
     }
 
 
@@ -96,8 +98,15 @@ def _convert_pdf_to_svg(source, output, timeout=120):
     if not output.is_file() or output.stat().st_size == 0:
         return False
     markup = output.read_text(encoding="utf-8", errors="ignore").lower()
+    root_match = re.search(r"<svg\b([^>]*)>", markup)
+    dimensions = root_match.group(1) if root_match else ""
+    view_box = re.search(r"viewbox=[\"']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)", dimensions)
+    width = re.search(r"\bwidth=[\"']\s*([\d.]+)", dimensions)
+    height = re.search(r"\bheight=[\"']\s*([\d.]+)", dimensions)
+    valid_size = bool(view_box and float(view_box.group(1)) > 0 and float(view_box.group(2)) > 0)
+    valid_size = valid_size or bool(width and height and float(width.group(1)) > 0 and float(height.group(1)) > 0)
     vector_elements = sum(markup.count(tag) for tag in ("<path", "<text", "<use", "<line", "<polyline", "<polygon"))
-    if "<image" in markup and vector_elements < 20:
+    if not valid_size or ("<image" in markup and vector_elements < 20):
         output.unlink(missing_ok=True)
         return False
     return vector_elements > 0
@@ -123,6 +132,22 @@ def preview_file(upload_id):
         ("preview.svg", "image/svg+xml"),
         ("original.pdf", "application/pdf"),
         ("plan.pdf", "application/pdf"),
+        ("original.png", "image/png"),
+        ("original.jpg", "image/jpeg"),
+        ("original.jpeg", "image/jpeg"),
+    ):
+        candidate = directory / name
+        if candidate.is_file():
+            return candidate, media_type
+    raise FileNotFoundError
+
+
+def original_file(upload_id):
+    if not upload_id.isalnum() or len(upload_id) != 32:
+        raise ImportErrorSafe("Identifiant d’import invalide.")
+    directory = UPLOAD_DIR / upload_id
+    for name, media_type in (
+        ("original.pdf", "application/pdf"),
         ("original.png", "image/png"),
         ("original.jpg", "image/jpeg"),
         ("original.jpeg", "image/jpeg"),

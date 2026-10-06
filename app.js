@@ -449,6 +449,19 @@ function setPlanImageVisible(visible) {
   planPreview.style.display = visible ? '' : 'none';
 }
 
+function fallbackToOriginalPdf() {
+  if (state.planFile?.extension !== '.pdf' || !state.planFile.originalUrl) return;
+  state.planFile.previewType = 'application/pdf';
+  state.planFile.previewUrl = state.planFile.originalUrl;
+  setPlanImageVisible(false);
+  planPreview.removeAttribute('href');
+  queuePdfRender(0);
+  document.querySelector('#save-status').textContent = 'SVG indisponible — affichage du PDF original';
+  saveState();
+}
+
+planPreview.addEventListener('error', fallbackToOriginalPdf);
+
 function renderPlanPreview() {
   const previewPath = state.planFile?.previewUrl;
   if (!previewPath) {
