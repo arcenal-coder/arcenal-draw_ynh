@@ -9,6 +9,7 @@ import uuid
 
 UPLOAD_DIR = pathlib.Path(os.environ.get("ARCENAL_UPLOAD_DIR", "/var/lib/arcenal-draw/uploads"))
 MAX_UPLOAD_BYTES = int(os.environ.get("ARCENAL_MAX_UPLOAD_BYTES", 100 * 1024 * 1024))
+MAX_SVG_PREVIEW_BYTES = int(os.environ.get("ARCENAL_MAX_SVG_PREVIEW_BYTES", 15 * 1024 * 1024))
 ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
 
 
@@ -96,6 +97,9 @@ def _convert_pdf_to_svg(source, output, timeout=120):
         output.unlink(missing_ok=True)
         return False
     if not output.is_file() or output.stat().st_size == 0:
+        return False
+    if output.stat().st_size > MAX_SVG_PREVIEW_BYTES:
+        output.unlink(missing_ok=True)
         return False
     markup = output.read_text(encoding="utf-8", errors="ignore").lower()
     root_match = re.search(r"<svg\b([^>]*)>", markup)

@@ -179,6 +179,21 @@ class BackendTest(unittest.TestCase):
                 self.assertFalse(importer._convert_pdf_to_svg(source, output))
                 self.assertFalse(output.exists())
 
+    def test_oversized_svg_falls_back_to_the_original_pdf(self):
+        from backend import importer
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "original.pdf"
+            output = Path(directory) / "preview.svg"
+            source.write_bytes(b"%PDF-1.7\n")
+
+            def write_oversized_svg(*_args, **_kwargs):
+                output.write_text("<svg width='1191' height='842'><path d='M0 0L1 1'/></svg>", encoding="utf-8")
+
+            with mock.patch("backend.importer.shutil.which", return_value="pdftocairo"), mock.patch("backend.importer.subprocess.run", side_effect=write_oversized_svg), mock.patch.object(importer, "MAX_SVG_PREVIEW_BYTES", 10):
+                self.assertFalse(importer._convert_pdf_to_svg(source, output))
+                self.assertFalse(output.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
