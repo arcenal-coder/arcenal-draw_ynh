@@ -2,31 +2,6 @@
 
 app="arcenal_draw"
 
-install_libredwg() {
-    local build_dir
-    build_dir="$(mktemp -d)"
-    ynh_setup_source --dest_dir="$build_dir" --source_id="libredwg"
-    (
-        cd "$build_dir"
-        ./configure \
-            --prefix="$install_dir/libredwg" \
-            --disable-bindings \
-            --disable-python \
-            --disable-json \
-            --enable-debug \
-            --disable-dependency-tracking \
-            --disable-werror \
-            CFLAGS="-O2 -w"
-        make --silent -C src -j2
-        make --silent -C programs -j2 dwg2dxf
-        make --silent -C src install
-        install -d "$install_dir/libredwg/bin"
-        install -m 755 programs/.libs/dwg2dxf "$install_dir/libredwg/bin/dwg2dxf"
-    )
-    ynh_safe_rm "$build_dir"
-    test -x "$install_dir/libredwg/bin/dwg2dxf"
-}
-
 configure_files() {
     ynh_config_add_nginx
     ynh_config_add_systemd

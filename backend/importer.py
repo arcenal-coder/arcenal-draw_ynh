@@ -1,17 +1,14 @@
 import hashlib
-import html
-import math
 import mimetypes
 import os
 import pathlib
 import shutil
-import subprocess
 import uuid
 
 
 UPLOAD_DIR = pathlib.Path(os.environ.get("ARCENAL_UPLOAD_DIR", "/var/lib/arcenal-draw/uploads"))
 MAX_UPLOAD_BYTES = int(os.environ.get("ARCENAL_MAX_UPLOAD_BYTES", 100 * 1024 * 1024))
-ALLOWED_EXTENSIONS = {".dwg", ".dxf", ".pdf", ".png", ".jpg", ".jpeg"}
+ALLOWED_EXTENSIONS = {".pdf"}
 
 
 class ImportErrorSafe(Exception):
@@ -36,148 +33,31 @@ def store_upload(stream, filename, content_length):
     target = target_dir / f"original{extension}"
     digest = hashlib.sha256()
     remaining = content_length
+    header = b""
     with target.open("xb") as destination:
         while remaining:
             chunk = stream.read(min(1024 * 1024, remaining))
             if not chunk:
                 break
+            if len(header) < 1024:
+                header = (header + chunk)[:1024]
             destination.write(chunk)
             digest.update(chunk)
             remaining -= len(chunk)
     if remaining:
         shutil.rmtree(target_dir, ignore_errors=True)
         raise ImportErrorSafe("Téléversement incomplet.")
+    if b"%PDF-" not in header:
+        shutil.rmtree(target_dir, ignore_errors=True)
+        raise ImportErrorSafe("Le fichier sélectionné n’est pas un PDF valide.")
     return {
         "id": upload_id,
         "name": safe_name(filename),
         "extension": extension,
         "path": str(target),
         "sha256": digest.hexdigest(),
-        "requiresCalibration": extension in {".pdf", ".png", ".jpg", ".jpeg"},
+        "requiresCalibration": True,
     }
-
-
-def _run(command, label, timeout=120):
-    try:
-        subprocess.run(command, check=True, timeout=timeout, capture_output=True, text=True)
-    except (subprocess.SubprocessError, OSError) as error:
-        detail = getattr(error, "stderr", "") or str(error)
-        raise ImportErrorSafe(f"{label} impossible : {detail[:240]}") from error
-
-
-def _convert_dwg(executable, source, output, timeout=120):
-    output.unlink(missing_ok=True)
-    try:
-        result = subprocess.run(
-            [executable, "--overwrite", "--file", str(output), str(source)],
-            check=False,
-            timeout=timeout,
-            capture_output=True,
-            text=True,
-        )
-    except (subprocess.SubprocessError, OSError) as error:
-        raise ImportErrorSafe(f"Conversion DWG impossible : {str(error)[:240]}") from error
-    if not output.is_file() or output.stat().st_size == 0:
-        detail = result.stderr or result.stdout or f"code de sortie {result.returncode}"
-        raise ImportErrorSafe(f"Conversion DWG impossible : {detail[:240]}")
-    return result.returncode != 0
-
-
-def _points_from_entity(entity):
-    kind = entity.dxftype()
-    if kind == "LINE":
-        return [(entity.dxf.start.x, entity.dxf.start.y), (entity.dxf.end.x, entity.dxf.end.y)]
-    if kind == "LWPOLYLINE":
-        return [(point[0], point[1]) for point in entity.get_points("xy")]
-    if kind == "POLYLINE":
-        return [(vertex.dxf.location.x, vertex.dxf.location.y) for vertex in entity.vertices]
-    if kind in {"CIRCLE", "ARC"}:
-        center, radius = entity.dxf.center, float(entity.dxf.radius)
-        return [(center.x - radius, center.y - radius), (center.x + radius, center.y + radius)]
-    if kind in {"TEXT", "MTEXT"}:
-        point = entity.dxf.insert
-        return [(point.x, point.y)]
-    try:
-        return [(point.x, point.y) for point in entity.flattening(0.1)]
-    except (AttributeError, TypeError, ValueError):
-        return []
-
-
-def _expanded_entities(layout):
-    pending = list(layout)
-    while pending:
-        entity = pending.pop(0)
-        if entity.dxftype() in {"INSERT", "DIMENSION"}:
-            try:
-                pending[0:0] = list(entity.virtual_entities())
-                continue
-            except Exception:
-                pass
-        yield entity
-
-
-def _dxf_to_svg(source, output):
-    try:
-        import ezdxf
-    except ImportError as error:
-        raise ImportErrorSafe("Le moteur DXF ezdxf n’est pas installé sur le serveur.") from error
-    try:
-        document = ezdxf.readfile(source)
-        entities = list(_expanded_entities(document.modelspace()))
-    except Exception as error:
-        raise ImportErrorSafe(f"Lecture DXF impossible : {str(error)[:240]}") from error
-
-    all_points = [point for entity in entities for point in _points_from_entity(entity)]
-    if not all_points:
-        raise ImportErrorSafe("Le fichier DXF ne contient aucun tracé 2D exploitable.")
-    min_x = min(point[0] for point in all_points)
-    max_x = max(point[0] for point in all_points)
-    min_y = min(point[1] for point in all_points)
-    max_y = max(point[1] for point in all_points)
-    width = max(max_x - min_x, 1e-9)
-    height = max(max_y - min_y, 1e-9)
-    scale = min(330 / width, 240 / height)
-    pad_x = (330 - width * scale) / 2
-    pad_y = (240 - height * scale) / 2
-
-    def xy(point):
-        return pad_x + (point[0] - min_x) * scale, pad_y + (max_y - point[1]) * scale
-
-    shapes = []
-    for entity in entities:
-        kind = entity.dxftype()
-        points = _points_from_entity(entity)
-        if kind == "LINE" and len(points) == 2:
-            start, end = xy(points[0]), xy(points[1])
-            shapes.append(f'<line x1="{start[0]:.3f}" y1="{start[1]:.3f}" x2="{end[0]:.3f}" y2="{end[1]:.3f}"/>')
-        elif kind in {"LWPOLYLINE", "POLYLINE"} and len(points) > 1:
-            mapped = " ".join(f"{x:.3f},{y:.3f}" for x, y in map(xy, points))
-            shapes.append(f'<polyline points="{mapped}" fill="none"/>')
-        elif kind == "CIRCLE":
-            center = xy((entity.dxf.center.x, entity.dxf.center.y))
-            shapes.append(f'<circle cx="{center[0]:.3f}" cy="{center[1]:.3f}" r="{float(entity.dxf.radius) * scale:.3f}"/>')
-        elif kind == "ARC":
-            center = entity.dxf.center
-            radius = float(entity.dxf.radius)
-            start_angle, end_angle = math.radians(entity.dxf.start_angle), math.radians(entity.dxf.end_angle)
-            start = xy((center.x + radius * math.cos(start_angle), center.y + radius * math.sin(start_angle)))
-            end = xy((center.x + radius * math.cos(end_angle), center.y + radius * math.sin(end_angle)))
-            large = 1 if (entity.dxf.end_angle - entity.dxf.start_angle) % 360 > 180 else 0
-            shapes.append(f'<path d="M{start[0]:.3f},{start[1]:.3f} A{radius * scale:.3f},{radius * scale:.3f} 0 {large} 0 {end[0]:.3f},{end[1]:.3f}"/>')
-        elif kind in {"TEXT", "MTEXT"} and points:
-            position = xy(points[0])
-            value = entity.plain_text() if kind == "MTEXT" else entity.dxf.text
-            shapes.append(f'<text x="{position[0]:.3f}" y="{position[1]:.3f}" fill="#33434d" stroke="none" font-size="3">{html.escape(str(value))}</text>')
-        elif len(points) > 1:
-            mapped = " ".join(f"{x:.3f},{y:.3f}" for x, y in map(xy, points))
-            shapes.append(f'<polyline points="{mapped}" fill="none"/>')
-
-    svg = ('<?xml version="1.0" encoding="UTF-8"?>'
-           '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 240">'
-           '<rect width="330" height="240" fill="white"/>'
-           '<g fill="none" stroke="#667680" stroke-width="0.45">'
-           + "".join(shapes) + '</g></svg>')
-    output.write_text(svg, encoding="utf-8")
 
 
 def _preview_result(upload, preview, media_type, conversion):
@@ -193,37 +73,14 @@ def _preview_result(upload, preview, media_type, conversion):
 
 def convert_upload(upload):
     source = pathlib.Path(upload["path"])
-    extension = upload["extension"]
-    if extension in {".png", ".jpg", ".jpeg"}:
-        return _preview_result(upload, source, mimetypes.guess_type(source.name)[0] or "image/jpeg", "image native")
-    if extension == ".pdf":
-        return _preview_result(upload, source, "application/pdf", "PDF natif")
-    if extension == ".dwg":
-        configured_executable = os.environ.get("ARCENAL_DWG2DXF", "")
-        executable = configured_executable if configured_executable and os.access(configured_executable, os.X_OK) else shutil.which("dwg2dxf")
-        if not executable:
-            raise ImportErrorSafe("Le moteur DWG LibreDWG (dwg2dxf) n’est pas disponible sur ce serveur YunoHost.")
-        source_dxf = source.with_name("converted.dxf")
-        _convert_dwg(executable, source, source_dxf)
-    else:
-        source_dxf = source
-    preview = source.with_name("preview.svg")
-    _dxf_to_svg(source_dxf, preview)
-    executable = shutil.which("rsvg-convert")
-    if not executable:
-        raise ImportErrorSafe("Le convertisseur PDF vectoriel librsvg n’est pas installé sur le serveur.")
-    pdf = source.with_name("plan.pdf")
-    _run([executable, "-f", "pdf", "-o", str(pdf), str(preview)], "Conversion en PDF vectoriel")
-    preview.unlink(missing_ok=True)
-    return _preview_result(upload, pdf, "application/pdf", "LibreDWG géométrique + PDF vectoriel" if extension == ".dwg" else "DXF + PDF vectoriel")
+    return _preview_result(upload, source, "application/pdf", "PDF natif")
 
 
 def preview_file(upload_id):
     if not upload_id.isalnum() or len(upload_id) != 32:
         raise ImportErrorSafe("Identifiant d’import invalide.")
     directory = UPLOAD_DIR / upload_id
-    for name in ("plan.pdf", "original.pdf", "original.png", "original.jpg", "original.jpeg", "preview.svg", "preview.png"):
-        candidate = directory / name
-        if candidate.is_file():
-            return candidate, mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"
+    candidate = directory / "original.pdf"
+    if candidate.is_file():
+        return candidate, mimetypes.guess_type(candidate.name)[0] or "application/pdf"
     raise FileNotFoundError

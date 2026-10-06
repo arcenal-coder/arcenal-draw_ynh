@@ -13,7 +13,6 @@ const pdfLayer = document.querySelector('#pdf-layer');
 const sheetBackground = document.querySelector('#sheet-background');
 const sheetMargin = document.querySelector('#sheet-margin');
 const mapLayer = document.querySelector('#map-layer');
-const planPreview = document.querySelector('#plan-preview');
 const overzoneLayer = document.querySelector('#overzone-layer');
 const zoneLayer = document.querySelector('#zone-layer');
 const impactLayer = document.querySelector('#impact-layer');
@@ -309,10 +308,6 @@ function setOrientation(orientation) {
   sheetMargin.setAttribute('y', state.sheetMargin);
   sheetMargin.setAttribute('width', width - state.sheetMargin * 2);
   sheetMargin.setAttribute('height', height - state.sheetMargin * 2);
-  planPreview.setAttribute('x', 0);
-  planPreview.setAttribute('y', 0);
-  planPreview.setAttribute('width', width);
-  planPreview.setAttribute('height', height);
   sheetFrame.classList.toggle('portrait', portrait);
   sheetFrame.style.setProperty('--sheet-width', `${width}mm`);
   sheetFrame.style.setProperty('--sheet-height', `${height}mm`);
@@ -320,7 +315,7 @@ function setOrientation(orientation) {
   document.documentElement.style.setProperty('--sheet-height', `${height}mm`);
   document.querySelector('#print-page-style').textContent = `@page { size: A3 ${orientation}; margin: 0; }`;
   renderTitleBlock();
-  if (state.planFile?.previewType === 'application/pdf') queuePdfRender(0);
+  if (state.planFile) queuePdfRender(0);
 }
 
 function mapScale() {
@@ -331,7 +326,7 @@ function updateMapTransform() {
   const scale = mapScale();
   mapLayer.setAttribute('transform', `translate(${150 + state.panX} ${135 + state.panY}) scale(${scale}) translate(-150 -135)`);
   document.querySelector('#plan-zoom-value').textContent = `${state.planZoom} %`;
-  if (state.planFile?.previewType === 'application/pdf') queuePdfRender();
+  if (state.planFile) queuePdfRender();
 }
 
 function clearPdfRenderer() {
@@ -360,7 +355,7 @@ async function ensurePdfPage(sourceKey) {
 }
 
 async function renderPdfTiles() {
-  const sourceKey = state.planFile?.previewType === 'application/pdf' ? apiUrl(state.planFile.previewUrl) : '';
+  const sourceKey = state.planFile?.previewUrl ? apiUrl(state.planFile.previewUrl) : '';
   if (!sourceKey || editorView.hidden) return;
   const generation = ++pdfRenderGeneration;
   try {
@@ -446,31 +441,15 @@ function queuePdfRender(delay = 45) {
   pdfRenderTimer = setTimeout(renderPdfTiles, delay);
 }
 
-function setSvgVisible(element, visible) {
-  element.hidden = !visible;
-  element.style.display = visible ? '' : 'none';
-}
-
 function renderPlanPreview() {
   const previewPath = state.planFile?.previewUrl;
   if (!previewPath) {
     clearPdfRenderer();
     sheetBackground.setAttribute('fill', '#fff');
-    setSvgVisible(planPreview, false);
-    planPreview.removeAttribute('href');
     return;
   }
-  if (state.planFile.previewType === 'application/pdf') {
-    sheetBackground.setAttribute('fill', 'none');
-    setSvgVisible(planPreview, false);
-    planPreview.removeAttribute('href');
-    queuePdfRender(0);
-    return;
-  }
-  clearPdfRenderer();
-  sheetBackground.setAttribute('fill', '#fff');
-  planPreview.setAttribute('href', apiUrl(previewPath));
-  setSvgVisible(planPreview, true);
+  sheetBackground.setAttribute('fill', 'none');
+  queuePdfRender(0);
 }
 
 function niceScaleSegment(rawValue) {
@@ -1075,7 +1054,7 @@ async function processSignatureFile(kind, file) {
 
 function openCalibration(fileName, recalibration = false) {
   pendingFileName = fileName;
-  const requiresTwoPoints = /\.(pdf|png|jpe?g)$/i.test(fileName);
+  const requiresTwoPoints = /\.pdf$/i.test(fileName);
   document.querySelector('#calibration-file').textContent = recalibration ? `Recalibrage de « ${state.baseName} ». Les PDF déjà exportés ne seront pas modifiés.` : requiresTwoPoints ? `« ${fileName} » est un document sans unité métrique exploitable : une calibration par deux points est obligatoire.` : `« ${fileName} » : confirmez l’unité déclarée ou calibrez le plan par deux points.`;
   const sourceUnit = document.querySelector('#source-unit');
   sourceUnit.value = recalibration ? state.calibration.sourceUnit : 'unknown';
@@ -1101,8 +1080,8 @@ function confirmCalibration(event) {
   const unit = document.querySelector('#source-unit').value;
   state.calibration = { sourceUnit: unit, metersPerNativeUnit: updateCalibrationPreview(), method: unit === 'unknown' ? 'two-points' : 'file' };
   if (pendingFileName && pendingFileName !== state.baseName) {
-    state = { ...freshState(`Plan de balisage — ${pendingFileName.replace(/\.(dwg|dxf|pdf|png|jpe?g)$/i, '')}`), baseName: pendingFileName, calibration: state.calibration };
-    state.location = pendingFileName.replace(/\.(dwg|dxf|pdf|png|jpe?g)$/i, '');
+    state = { ...freshState(`Plan de balisage — ${pendingFileName.replace(/\.pdf$/i, '')}`), baseName: pendingFileName, calibration: state.calibration };
+    state.location = pendingFileName.replace(/\.pdf$/i, '');
     state.planFile = pendingPlanImport;
   }
   calibrationDialog.close();
@@ -1186,7 +1165,7 @@ sheet.addEventListener('pointerup', () => {
 });
 
 new ResizeObserver(() => {
-  if (state.planFile?.previewType === 'application/pdf') queuePdfRender(80);
+  if (state.planFile) queuePdfRender(80);
 }).observe(sheetFrame);
 document.querySelector('#circle-panel').addEventListener('change', updateComputedRadius);
 document.querySelector('#manual-radius').addEventListener('input', updateComputedRadius);
@@ -1338,8 +1317,8 @@ function setImportStatus(message = '', stateName = '') {
 
 async function handlePlanFile(file) {
   if (!file) return;
-  if (!/\.(dwg|dxf|pdf|png|jpe?g)$/i.test(file.name)) {
-    setImportStatus('Format refusé. Utilisez un fichier DWG, DXF, PDF, PNG ou JPEG.', 'error');
+  if (!/\.pdf$/i.test(file.name) || (file.type && file.type !== 'application/pdf')) {
+    setImportStatus('Format refusé. Utilisez un fichier PDF.', 'error');
     return;
   }
   if (file.size > 100 * 1024 * 1024) {

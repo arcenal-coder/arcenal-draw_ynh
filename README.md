@@ -6,7 +6,7 @@ Le POC permet de valider l'accueil, les bases réutilisables, la calibration, un
 
 La synthèse fonctionnelle complète se trouve dans `SPECIFICATION_POC.md`.
 
-Le PDF est le format de travail interne. Un PDF importé reste natif et est lu progressivement avec PDF.js, sans conversion PNG. Les DXF sont convertis en PDF vectoriel ; les DWG suivent la même chaîne après conversion par `dwg2dxf`, en conservant les définitions de blocs nécessaires aux plans AutoCAD. Les matériaux, styles de tableaux et autres objets AutoCAD décoratifs instables n'empêchent pas l'import lorsqu'un DXF exploitable a bien été produit. Une référence de bloc isolée et absente est ignorée sans masquer les autres géométries du plan. PNG et JPEG restent acceptés pour les plans scannés. Tous les originaux sont conservés.
+Le PDF est l’unique format de fond de plan. Le fichier importé reste natif et est lu progressivement avec PDF.js, sans conversion PNG. L’original est conservé intact.
 
 ## Socle serveur
 
@@ -15,7 +15,7 @@ Le dépôt contient désormais une application WSGI Python volontairement minima
 - SQLite pour les projets, archives et métadonnées de fichiers ;
 - Gunicorn derrière Nginx ;
 - authentification issue des en-têtes SSO YunoHost ;
-- dépôt limité à 100 Mo et restreint aux formats DWG, DXF, PDF, PNG et JPEG ;
+- dépôt limité à 100 Mo et réservé aux fichiers PDF ;
 - sauvegarde locale du navigateur conservée comme mode de secours ;
 - synchronisation automatique vers l'API lorsque l'application est servie en HTTP(S).
 
@@ -27,7 +27,7 @@ Le répertoire constitue un paquet YunoHost v2 local. Depuis l'administration Yu
 sudo yunohost app install https://URL_DU_DEPOT_GIT --debug
 ```
 
-L'application installe Nginx, Gunicorn, PDF.js, ezdxf, librsvg, GNU LibreDWG 0.13.3, le service `arcenal_draw` et son répertoire de données sauvegardable. LibreDWG est compilé automatiquement pour l'architecture du serveur pendant l'installation ou la mise à jour ; aucune installation manuelle de `dwg2dxf` n'est nécessaire.
+L'application installe Nginx, Gunicorn, PDF.js, le service `arcenal_draw` et son répertoire de données sauvegardable. Aucun moteur de CAO n’est installé sur le serveur.
 
 ## Vérifications locales
 

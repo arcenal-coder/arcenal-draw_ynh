@@ -18,14 +18,14 @@
         <div class="home-intro">
           <p class="eyebrow">PREUVE DE CONCEPT</p>
           <h1>Ouvrir, calibrer, annoter, exporter.</h1>
-          <p>Réutilisez une base existante ou déposez un nouveau plan AutoCAD. Le fichier original reste intact.</p>
+          <p>Réutilisez une base existante ou déposez un nouveau plan PDF. Le fichier original reste intact.</p>
         </div>
         <label class="drop-zone" id="drop-zone">
-          <input id="plan-file" type="file" accept=".dwg,.dxf,.pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden />
+          <input id="plan-file" type="file" accept=".pdf,application/pdf" hidden />
           <span class="drop-icon">＋</span>
-          <strong>Déposer un plan DWG, DXF, PDF ou image</strong>
+          <strong>Déposer un plan PDF</strong>
           <span>ou cliquer pour choisir un fichier</span>
-          <small>PDF et images seront calibrés en mètres à la première ouverture.</small>
+          <small>Le PDF sera calibré en mètres à la première ouverture.</small>
           <output id="import-status" class="import-status" role="status" aria-live="polite"></output>
         </label>
         <section class="library-section">
@@ -39,8 +39,8 @@
         <section class="library-section">
           <div class="section-heading"><div><p class="eyebrow">BASES DE PLANS</p><h2>Plans déjà exploitables</h2></div></div>
           <div class="card-grid">
-            <article class="plan-card"><div class="plan-thumb thumb-u662"><span>U 662</span></div><div class="plan-card-body"><strong>Unité U662 — Rack 600</strong><span>DWG converti · mètres · calibré</span><button data-open-base="Unité U662 — Rack 600">Créer un projet</button></div></article>
-            <article class="plan-card"><div class="plan-thumb thumb-d11"><span>D 11</span></div><div class="plan-card-body"><strong>Bâtiment D11</strong><span>DXF converti · millimètres · calibré</span><button data-open-base="Bâtiment D11">Créer un projet</button></div></article>
+            <article class="plan-card"><div class="plan-thumb thumb-u662"><span>U 662</span></div><div class="plan-card-body"><strong>Unité U662 — Rack 600</strong><span>PDF · mètres · calibré</span><button data-open-base="Unité U662 — Rack 600">Créer un projet</button></div></article>
+            <article class="plan-card"><div class="plan-thumb thumb-d11"><span>D 11</span></div><div class="plan-card-body"><strong>Bâtiment D11</strong><span>PDF · mètres · calibré</span><button data-open-base="Bâtiment D11">Créer un projet</button></div></article>
           </div>
         </section>
       </main>
@@ -79,7 +79,6 @@
               <rect id="sheet-background" width="420" height="297" fill="#fff"/>
               <rect id="sheet-margin" x="10" y="10" width="400" height="277" fill="none" stroke="#cbd2d7" stroke-width=".35"/>
               <g id="map-layer">
-                <image id="plan-preview" x="0" y="0" width="420" height="297" preserveAspectRatio="xMidYMid meet" hidden />
                 <g id="overzone-layer"></g><g id="zone-layer"></g><g id="impact-layer"></g><g id="signal-layer"></g><g id="measurement-layer"></g>
               </g>
               <g id="title-block"></g>

@@ -7,19 +7,19 @@ La feuille visible est la source de vérité du rendu. Le zoom d'affichage ne mo
 ## Démarrage et bases de plans
 
 - Accueil avec projets récents et bases de plans déjà converties.
-- Import par sélection ou glisser-déposer d'un fichier DWG, DXF, PDF, PNG ou JPEG.
-- Conservation du fichier AutoCAD original.
+- Import par sélection ou glisser-déposer d’un fichier PDF.
+- Conservation du PDF original.
 - Conversion future vers une géométrie interne vectorielle normalisée en mètres.
 - Création de plusieurs projets annotés à partir d'une même base propre.
 
-Le POC présente ce parcours, mais simule encore la conversion réelle du DWG/DXF.
+Le PDF est affiché nativement, sans conversion en image.
 
 ## Calibration
 
 - Lecture automatique de l'unité déclarée quand elle est fiable.
 - Unité interne systématique : mètre.
 - Si l'unité est absente : calibration par deux points et saisie d'une distance réelle en mètres.
-- Pour un PDF ou une image, cette calibration est obligatoire à la première ouverture du document. Le fond réellement converti par le serveur est affiché dans la feuille ; la distance de référence est saisie dans la fenêtre de calibration et pourra être corrigée ultérieurement.
+- Pour un PDF, cette calibration est obligatoire à la première ouverture du document. Le fichier natif est affiché dans la feuille ; la distance de référence est saisie dans la fenêtre de calibration et pourra être corrigée ultérieurement.
 - Recalibration ultérieure disponible.
 - Une modification de calibration ne modifie jamais rétroactivement un PDF déjà exporté.
 
@@ -113,7 +113,6 @@ Lorsque plusieurs zones radiologiques sont fusionnées, leurs surbalisages sont 
 
 ## Limites volontaires du POC
 
-- Le PDF est le fond de plan interne unique : les PDF natifs ne sont pas rasterisés ; les DXF et DWG sont convertis en PDF vectoriel avant affichage. Le lecteur charge uniquement les portions nécessaires au niveau de zoom demandé. PNG/JPEG restent disponibles pour les plans scannés. Le DWG requiert `dwg2dxf` de LibreDWG sur le serveur.
-- La conversion DWG/DXF est simulée.
+- Le PDF est l’unique format de fond de plan. Il n’est pas converti en PNG ; le lecteur charge uniquement les portions nécessaires au niveau de zoom demandé.
 - La sélection graphique directe des deux points reste à ajouter ; la version actuelle demande la distance mesurée et la distance réelle dans la fenêtre de calibration.
 - Le stockage serveur, SQLite et le SSO YunoHost ne sont pas encore connectés.

@@ -4,8 +4,6 @@ import json
 import os
 import tempfile
 import unittest
-from pathlib import Path
-from unittest import mock
 
 class BackendTest(unittest.TestCase):
     @classmethod
@@ -68,17 +66,15 @@ class BackendTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("Format", result["error"])
 
-    def test_image_upload_produces_a_readable_preview(self):
+    def test_image_upload_is_rejected(self):
         status, result = self.call(
             "POST",
             "/api/imports",
             raw=b"opaque-image-content",
             headers={"HTTP_X_FILENAME": "plan.png"},
         )
-        self.assertEqual(status, 201)
-        self.assertEqual(result["status"], "converted")
-        status, _ = self.call("GET", f"/api/imports/{result['id']}/preview")
-        self.assertEqual(status, 200)
+        self.assertEqual(status, 400)
+        self.assertIn("Format", result["error"])
 
     def test_pdf_is_kept_native_and_supports_byte_ranges(self):
         content = b"%PDF-1.7\n" + b"0" * 128
@@ -99,48 +95,27 @@ class BackendTest(unittest.TestCase):
         self.assertEqual(status, 206)
         self.assertEqual(preview, b"%PDF-1.7")
 
-    def test_dwg_warnings_are_accepted_when_a_dxf_is_produced(self):
-        from backend import importer
+    def test_dwg_and_dxf_uploads_are_rejected(self):
+        for filename in ("plan.dwg", "plan.dxf"):
+            with self.subTest(filename=filename):
+                status, result = self.call(
+                    "POST",
+                    "/api/imports",
+                    raw=b"unsupported-cad-content",
+                    headers={"HTTP_X_FILENAME": filename},
+                )
+                self.assertEqual(status, 400)
+                self.assertIn("Format", result["error"])
 
-        with tempfile.TemporaryDirectory() as directory:
-            source = Path(directory) / "plan.dwg"
-            output = Path(directory) / "plan.dxf"
-            source.write_bytes(b"DWG")
-
-            def produce_dxf(*_args, **_kwargs):
-                output.write_text("0\nSECTION\n0\nEOF\n", encoding="ascii")
-                return mock.Mock(returncode=1, stderr="Warning: Unstable Class MATERIAL", stdout="")
-
-            with mock.patch("backend.importer.subprocess.run", side_effect=produce_dxf) as run:
-                self.assertTrue(importer._convert_dwg("dwg2dxf", source, output))
-                command = run.call_args.args[0]
-                self.assertIn("--overwrite", command)
-                self.assertNotIn("--minimal", command)
-
-    def test_dwg_failure_remains_blocking_without_output(self):
-        from backend import importer
-
-        with tempfile.TemporaryDirectory() as directory:
-            source = Path(directory) / "plan.dwg"
-            output = Path(directory) / "plan.dxf"
-            source.write_bytes(b"DWG")
-            result = mock.Mock(returncode=1, stderr="READ ERROR", stdout="")
-
-            with mock.patch("backend.importer.subprocess.run", return_value=result):
-                with self.assertRaises(importer.ImportErrorSafe):
-                    importer._convert_dwg("dwg2dxf", source, output)
-
-    def test_missing_block_reference_does_not_stop_other_entities(self):
-        from backend import importer
-
-        broken_insert = mock.Mock()
-        broken_insert.dxftype.return_value = "INSERT"
-        broken_insert.virtual_entities.side_effect = RuntimeError('Required block definition for "*X" does not exist.')
-        valid_line = mock.Mock()
-        valid_line.dxftype.return_value = "LINE"
-
-        entities = list(importer._expanded_entities([broken_insert, valid_line]))
-        self.assertEqual(entities, [broken_insert, valid_line])
+    def test_renamed_non_pdf_file_is_rejected(self):
+        status, result = self.call(
+            "POST",
+            "/api/imports",
+            raw=b"not-really-a-pdf",
+            headers={"HTTP_X_FILENAME": "faux-plan.pdf"},
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("PDF valide", result["error"])
 
 
 if __name__ == "__main__":

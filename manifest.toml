@@ -4,7 +4,7 @@ id = "arcenal_draw"
 name = "ARCenal DRAW"
 description.fr = "Création et archivage de plans de contrôle gammagraphique"
 description.en = "Create and archive gamma radiography control plans"
-version = "0.4.3~ynh1"
+version = "0.5.0~ynh1"
 maintainers = ["ARCenal"]
 
 [upstream]
@@ -34,12 +34,6 @@ ram.build = "500M"
     default = "visitors"
 
 [resources]
-    [resources.sources]
-        [resources.sources.libredwg]
-        url = "https://ftp.gnu.org/gnu/libredwg/libredwg-0.13.3.tar.xz"
-        sha256 = "83f1f6e78a744777a481ff4520e4cef3f8ac4b2c1c25671077ca12fe81e8816e"
-        in_subdir = true
-
     [resources.system_user]
 
     [resources.install_dir]
@@ -57,4 +51,4 @@ ram.build = "500M"
         default = 8095
 
     [resources.apt]
-    packages = "python3, gunicorn, poppler-utils, python3-ezdxf, librsvg2-bin, build-essential, pkg-config"
+    packages = "python3, gunicorn"
