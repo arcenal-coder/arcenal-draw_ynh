@@ -1,5 +1,4 @@
 import hashlib
-import mimetypes
 import os
 import pathlib
 import shutil
@@ -80,7 +79,8 @@ def preview_file(upload_id):
     if not upload_id.isalnum() or len(upload_id) != 32:
         raise ImportErrorSafe("Identifiant d’import invalide.")
     directory = UPLOAD_DIR / upload_id
-    candidate = directory / "original.pdf"
-    if candidate.is_file():
-        return candidate, mimetypes.guess_type(candidate.name)[0] or "application/pdf"
+    for name in ("original.pdf", "plan.pdf"):
+        candidate = directory / name
+        if candidate.is_file():
+            return candidate, "application/pdf"
     raise FileNotFoundError
