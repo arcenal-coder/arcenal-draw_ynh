@@ -17,12 +17,12 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("const displayWidth = baseWidth * zoom * cssX", javascript)
         self.assertIn("const displayHeight = baseHeight * zoom * cssY", javascript)
 
-    def test_plan_import_accepts_only_pdf(self):
+    def test_plan_import_accepts_pdf_png_and_jpeg(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
-        self.assertIn('accept=".pdf,application/pdf"', markup)
-        self.assertIn("Format refusé. Utilisez un fichier PDF.", javascript)
-        self.assertNotIn('id="plan-preview"', markup)
+        self.assertIn('accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"', markup)
+        self.assertIn("Format refusé. Utilisez un fichier PDF, PNG ou JPEG.", javascript)
+        self.assertIn('id="plan-preview"', markup)
 
     def test_measurements_are_persisted_and_use_calibration(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")

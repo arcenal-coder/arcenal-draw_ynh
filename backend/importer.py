@@ -2,12 +2,13 @@ import hashlib
 import os
 import pathlib
 import shutil
+import subprocess
 import uuid
 
 
 UPLOAD_DIR = pathlib.Path(os.environ.get("ARCENAL_UPLOAD_DIR", "/var/lib/arcenal-draw/uploads"))
 MAX_UPLOAD_BYTES = int(os.environ.get("ARCENAL_MAX_UPLOAD_BYTES", 100 * 1024 * 1024))
-ALLOWED_EXTENSIONS = {".pdf"}
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
 
 
 class ImportErrorSafe(Exception):
@@ -46,9 +47,15 @@ def store_upload(stream, filename, content_length):
     if remaining:
         shutil.rmtree(target_dir, ignore_errors=True)
         raise ImportErrorSafe("Téléversement incomplet.")
-    if b"%PDF-" not in header:
+    signatures = {
+        ".pdf": b"%PDF-" in header,
+        ".png": header.startswith(b"\x89PNG\r\n\x1a\n"),
+        ".jpg": header.startswith(b"\xff\xd8\xff"),
+        ".jpeg": header.startswith(b"\xff\xd8\xff"),
+    }
+    if not signatures[extension]:
         shutil.rmtree(target_dir, ignore_errors=True)
-        raise ImportErrorSafe("Le fichier sélectionné n’est pas un PDF valide.")
+        raise ImportErrorSafe("Le contenu du fichier ne correspond pas à son format.")
     return {
         "id": upload_id,
         "name": safe_name(filename),
@@ -70,17 +77,57 @@ def _preview_result(upload, preview, media_type, conversion):
     }
 
 
+def _convert_pdf_to_svg(source, output, timeout=120):
+    executable = shutil.which("pdftocairo")
+    if not executable:
+        return False
+    output.unlink(missing_ok=True)
+    try:
+        subprocess.run(
+            [executable, "-svg", "-f", "1", "-l", "1", str(source), str(output)],
+            check=True,
+            timeout=timeout,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.SubprocessError, OSError):
+        output.unlink(missing_ok=True)
+        return False
+    if not output.is_file() or output.stat().st_size == 0:
+        return False
+    markup = output.read_text(encoding="utf-8", errors="ignore").lower()
+    vector_elements = sum(markup.count(tag) for tag in ("<path", "<text", "<use", "<line", "<polyline", "<polygon"))
+    if "<image" in markup and vector_elements < 20:
+        output.unlink(missing_ok=True)
+        return False
+    return vector_elements > 0
+
+
 def convert_upload(upload):
     source = pathlib.Path(upload["path"])
-    return _preview_result(upload, source, "application/pdf", "PDF natif")
+    extension = upload["extension"]
+    if extension == ".pdf":
+        preview = source.with_name("preview.svg")
+        if _convert_pdf_to_svg(source, preview):
+            return _preview_result(upload, preview, "image/svg+xml", "PDF vectoriel → SVG")
+        return _preview_result(upload, source, "application/pdf", "PDF natif optimisé")
+    media_type = "image/png" if extension == ".png" else "image/jpeg"
+    return _preview_result(upload, source, media_type, "Image native optimisée")
 
 
 def preview_file(upload_id):
     if not upload_id.isalnum() or len(upload_id) != 32:
         raise ImportErrorSafe("Identifiant d’import invalide.")
     directory = UPLOAD_DIR / upload_id
-    for name in ("original.pdf", "plan.pdf"):
+    for name, media_type in (
+        ("preview.svg", "image/svg+xml"),
+        ("original.pdf", "application/pdf"),
+        ("plan.pdf", "application/pdf"),
+        ("original.png", "image/png"),
+        ("original.jpg", "image/jpeg"),
+        ("original.jpeg", "image/jpeg"),
+    ):
         candidate = directory / name
         if candidate.is_file():
-            return candidate, "application/pdf"
+            return candidate, media_type
     raise FileNotFoundError

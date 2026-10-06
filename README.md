@@ -6,7 +6,7 @@ Le POC permet de valider l'accueil, les bases réutilisables, la calibration, un
 
 La synthèse fonctionnelle complète se trouve dans `SPECIFICATION_POC.md`.
 
-Le PDF est l’unique format de fond de plan. Le fichier importé reste natif et est lu progressivement avec PDF.js, sans conversion PNG. L’original est conservé intact.
+Les fonds de plan acceptés sont PDF, PNG et JPEG. Un PDF vectoriel est converti en SVG pour des déplacements et zooms fluides ; un PDF scanné reste lu progressivement avec PDF.js. Les PNG et JPEG restent natifs afin d’éviter une vectorisation lourde et imprécise. L’original est toujours conservé intact.
 
 ## Socle serveur
 
@@ -15,7 +15,7 @@ Le dépôt contient désormais une application WSGI Python volontairement minima
 - SQLite pour les projets, archives et métadonnées de fichiers ;
 - Gunicorn derrière Nginx ;
 - authentification issue des en-têtes SSO YunoHost ;
-- dépôt limité à 100 Mo et réservé aux fichiers PDF ;
+- dépôt limité à 100 Mo et réservé aux fichiers PDF, PNG et JPEG ;
 - sauvegarde locale du navigateur conservée comme mode de secours ;
 - synchronisation automatique vers l'API lorsque l'application est servie en HTTP(S).
 
@@ -27,7 +27,7 @@ Le répertoire constitue un paquet YunoHost v2 local. Depuis l'administration Yu
 sudo yunohost app install https://URL_DU_DEPOT_GIT --debug
 ```
 
-L'application installe Nginx, Gunicorn, PDF.js, le service `arcenal_draw` et son répertoire de données sauvegardable. Aucun moteur de CAO n’est installé sur le serveur.
+L'application installe Nginx, Gunicorn, PDF.js, Poppler, le service `arcenal_draw` et son répertoire de données sauvegardable. Aucun moteur de CAO n’est installé sur le serveur.
 
 ## Vérifications locales
 
