@@ -51,6 +51,9 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("realDistance / scaleSetup.nativeDistance", javascript)
         self.assertNotIn('id="source-unit"', markup)
         self.assertNotIn('id="native-distance"', markup)
+        self.assertIn('class="scale-guide-cross"', javascript)
+        self.assertNotIn('class="scale-guide-point"', javascript)
+        self.assertEqual(markup.count('>Calibrer</button>'), 2)
 
     def test_home_libraries_are_limited_searchable_and_reusable(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")

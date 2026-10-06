@@ -69,7 +69,7 @@
         <div class="header-actions">
           <label>Orientation<select id="orientation-select"><option value="landscape">A3 paysage</option><option value="portrait">A3 portrait</option></select></label>
           <div class="zoom-field"><span>Zoom du plan</span><div class="zoom-control"><button id="zoom-out" type="button" aria-label="Réduire le zoom">−</button><input id="plan-zoom" type="range" min="25" max="800" step="25" value="100" /><button id="zoom-in" type="button" aria-label="Augmenter le zoom">+</button></div><output id="plan-zoom-value">100 %</output></div>
-          <button class="secondary" id="recalibrate-button">Régler à nouveau</button>
+          <button class="secondary" id="recalibrate-button">Calibrer</button>
           <button class="secondary" id="settings-button">⚙ Paramètres</button>
           <button class="primary" id="export-button">Exporter PDF</button>
         </div>
@@ -138,7 +138,7 @@
               <label class="check-row"><input id="settings-labels" type="checkbox" checked /> Codes A–E visibles</label>
               <label class="check-row full"><input id="settings-title-block" type="checkbox" checked /> Afficher le cartouche sur le plan et le PDF</label>
             </div>
-            <div class="settings-actions"><button class="secondary" id="settings-recenter" type="button">Recentrer le plan</button><button class="secondary" id="settings-recalibrate" type="button">Régler à nouveau</button></div>
+            <div class="settings-actions"><button class="secondary" id="settings-recenter" type="button">Recentrer le plan</button><button class="secondary" id="settings-recalibrate" type="button">Calibrer</button></div>
             <p class="settings-calibration" id="settings-calibration-status"></p>
             <h2 class="settings-subtitle">Réalisation du plan</h2>
             <div class="settings-grid">

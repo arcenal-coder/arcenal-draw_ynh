@@ -1081,7 +1081,8 @@ function renderScaleGuide() {
   scaleLayer.replaceChildren();
   if (!scaleSetup.points.length) return;
   const [first, second] = scaleSetup.points;
-  scaleLayer.innerHTML = `${second ? `<line class="scale-guide-line" x1="${first.x}" y1="${first.y}" x2="${second.x}" y2="${second.y}"/>` : ''}<circle class="scale-guide-point" cx="${first.x}" cy="${first.y}" r="1.8"/>${second ? `<circle class="scale-guide-point" cx="${second.x}" cy="${second.y}" r="1.8"/>` : ''}`;
+  const cross = (point) => `<g class="scale-guide-cross" transform="translate(${point.x} ${point.y})"><line x1="-0.9" y1="-0.9" x2="0.9" y2="0.9"/><line x1="-0.9" y1="0.9" x2="0.9" y2="-0.9"/></g>`;
+  scaleLayer.innerHTML = `${second ? `<line class="scale-guide-line" x1="${first.x}" y1="${first.y}" x2="${second.x}" y2="${second.y}"/>` : ''}${cross(first)}${second ? cross(second) : ''}`;
 }
 
 function placeScalePoint(event) {
