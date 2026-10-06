@@ -68,7 +68,14 @@ class FrontendTests(unittest.TestCase):
         self.assertNotIn("Équipes visibles", javascript)
         self.assertIn('id="zoom-out"', markup)
         self.assertIn('id="zoom-in"', markup)
-        self.assertIn("function changePlanZoom(delta)", javascript)
+        self.assertIn("function setPlanZoom(value)", javascript)
+
+    def test_import_ui_resets_and_plan_library_loads_independently(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("setImportProgress('hidden')", javascript)
+        self.assertIn("setImportStatus();", javascript)
+        self.assertIn("Promise.allSettled", javascript)
+        self.assertIn("reusablePlans = [pendingPlanImport", javascript)
 
 
 if __name__ == "__main__":

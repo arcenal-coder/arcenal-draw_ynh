@@ -259,7 +259,7 @@ function renderReusablePlans(plans) {
     container.innerHTML = '<article class="plan-card"><div class="plan-thumb"><span>—</span></div><div class="plan-card-body"><strong>Aucun plan importé</strong><span>Vos plans convertis apparaîtront ici.</span></div></article>';
     return;
   }
-  container.innerHTML = plans.map((plan) => `<article class="plan-card"><div class="plan-thumb"><span>${escapeText(plan.extension.replace('.', '').toUpperCase())}</span></div><div class="plan-card-body"><strong>${escapeText(plan.name)}</strong><span>${escapeText(plan.conversion)} · ${new Date(plan.createdAt).toLocaleDateString('fr-FR')}</span><div class="card-actions"><button type="button" data-reuse-plan="${plan.id}">Créer un projet</button><button class="danger-action" type="button" data-delete-plan="${plan.id}">Supprimer</button></div></div></article>`).join('');
+  container.innerHTML = plans.map((plan) => `<article class="plan-card"><div class="plan-thumb"><span>${escapeText(plan.extension.replace('.', '').toUpperCase())}</span></div><div class="plan-card-body"><strong>${escapeText(plan.name)}</strong><span>${escapeText(plan.conversion)} · ${plan.createdAt ? new Date(plan.createdAt).toLocaleDateString('fr-FR') : 'importé'}</span><div class="card-actions"><button type="button" data-reuse-plan="${plan.id}">Créer un projet</button><button class="danger-action" type="button" data-delete-plan="${plan.id}">Supprimer</button></div></div></article>`).join('');
   container.querySelectorAll('[data-reuse-plan]').forEach((button) => button.addEventListener('click', () => {
     pendingPlanImport = plans.find((plan) => plan.id === button.dataset.reusePlan);
     if (pendingPlanImport) openCalibration(pendingPlanImport.name);
@@ -275,17 +275,20 @@ function renderReusablePlans(plans) {
 
 async function refreshServerLibrary() {
   if (!serverAvailable()) return;
-  try {
-    const [projectData, archiveData, planData] = await Promise.all([apiRequest('projects'), apiRequest('archives'), apiRequest('imports')]);
-    serverProjects = projectData.projects || [];
-    serverArchives = archiveData.archives || [];
-    reusablePlans = planData.plans || [];
+  const [projectResult, archiveResult, planResult] = await Promise.allSettled([apiRequest('projects'), apiRequest('archives'), apiRequest('imports')]);
+  if (projectResult.status === 'fulfilled') {
+    serverProjects = projectResult.value.projects || [];
     if (serverProjects.length) renderRecentProjects(serverProjects);
-    if (serverArchives.length) renderArchives(serverArchives);
-    renderReusablePlans(reusablePlans);
-  } catch (error) {
-    console.warn('Bibliothèque serveur indisponible', error);
   }
+  if (archiveResult.status === 'fulfilled') {
+    serverArchives = archiveResult.value.archives || [];
+    if (serverArchives.length) renderArchives(serverArchives);
+  }
+  if (planResult.status === 'fulfilled') {
+    reusablePlans = planResult.value.plans || [];
+    renderReusablePlans(reusablePlans);
+  }
+  [projectResult, archiveResult, planResult].filter((result) => result.status === 'rejected').forEach((result) => console.warn('Section de bibliothèque indisponible', result.reason));
 }
 
 function openEditor() {
@@ -338,6 +341,8 @@ function openHome() {
   saveState();
   editorView.hidden = true;
   homeView.hidden = false;
+  setImportProgress('hidden');
+  setImportStatus();
   renderRecentProjects();
   renderArchives();
   refreshServerLibrary();
@@ -1187,21 +1192,25 @@ document.querySelectorAll('[data-open-base]').forEach((button) => button.addEven
 }));
 document.querySelector('#back-home').addEventListener('click', openHome);
 document.querySelector('#orientation-select').addEventListener('change', (event) => { setOrientation(event.target.value); saveState(); });
-document.querySelector('#plan-zoom').addEventListener('input', (event) => { state.planZoom = Number(event.target.value); updateMapTransform(); renderZones(); renderTitleBlock(); saveState(); });
-function changePlanZoom(delta) {
-  const control = document.querySelector('#plan-zoom');
-  control.value = Math.max(Number(control.min), Math.min(Number(control.max), Number(control.value) + delta));
-  control.dispatchEvent(new Event('input', { bubbles: true }));
+function setPlanZoom(value) {
+  state.planZoom = Math.max(25, Math.min(800, Number(value) || 100));
+  document.querySelector('#plan-zoom').value = state.planZoom;
+  document.querySelector('#settings-zoom').value = state.planZoom;
+  updateMapTransform();
+  renderZones();
+  renderTitleBlock();
+  saveState();
 }
-document.querySelector('#zoom-out').addEventListener('click', () => changePlanZoom(-25));
-document.querySelector('#zoom-in').addEventListener('click', () => changePlanZoom(25));
+document.querySelector('#plan-zoom').addEventListener('input', (event) => setPlanZoom(event.target.value));
+document.querySelector('#zoom-out').addEventListener('click', (event) => { event.preventDefault(); setPlanZoom(state.planZoom - 25); });
+document.querySelector('#zoom-in').addEventListener('click', (event) => { event.preventDefault(); setPlanZoom(state.planZoom + 25); });
 document.querySelectorAll('.tool[data-tool]').forEach((button) => button.addEventListener('click', () => setTool(button.dataset.tool)));
 document.querySelector('#settings-button').addEventListener('click', openSettings);
 document.querySelector('#settings-close').addEventListener('click', () => settingsDialog.close());
 document.querySelector('#settings-theme').addEventListener('change', (event) => { state.theme = event.target.value; applyTheme(state.theme); saveState(); });
 document.querySelector('#settings-orientation').addEventListener('change', (event) => { document.querySelector('#orientation-select').value = event.target.value; setOrientation(event.target.value); saveState(); });
 document.querySelector('#settings-margin').addEventListener('change', (event) => { state.sheetMargin = Math.max(5, Math.min(20, Number(event.target.value) || 5)); setOrientation(state.orientation); saveState(); });
-document.querySelector('#settings-zoom').addEventListener('input', (event) => { state.planZoom = Number(event.target.value); document.querySelector('#plan-zoom').value = state.planZoom; updateMapTransform(); renderZones(); renderTitleBlock(); saveState(); });
+document.querySelector('#settings-zoom').addEventListener('input', (event) => setPlanZoom(event.target.value));
 document.querySelector('#settings-opacity').addEventListener('change', (event) => { state.zoneOpacity = Number(event.target.value); renderZones(); saveState(); });
 document.querySelector('#settings-labels').addEventListener('change', (event) => { state.showImpactLabels = event.target.checked; renderZones(); saveState(); });
 document.querySelector('#settings-title-block').addEventListener('change', (event) => { state.showTitleBlock = event.target.checked; renderTitleBlock(); saveState(); });
@@ -1466,6 +1475,9 @@ async function handlePlanFile(file) {
       pendingPlanImport = await uploadPlanFile(file);
       if (!pendingPlanImport.previewUrl) throw new Error('Le serveur utilise encore une ancienne version du moteur d’import. Mettez ARCenal DRAW à jour dans YunoHost.');
       document.querySelector('#save-status').textContent = `Plan converti avec ${pendingPlanImport.conversion}`;
+      pendingPlanImport.createdAt ||= new Date().toISOString();
+      reusablePlans = [pendingPlanImport, ...reusablePlans.filter((plan) => plan.id !== pendingPlanImport.id)];
+      renderReusablePlans(reusablePlans);
       setImportProgress('complete', 100);
       setImportStatus('Plan converti. Vérifiez maintenant son échelle.', 'success');
     } catch (error) {
