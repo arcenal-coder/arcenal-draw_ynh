@@ -25,6 +25,15 @@ class FrontendTests(unittest.TestCase):
         self.assertIn('id="plan-preview"', markup)
         self.assertIn("function fallbackToOriginalPdf()", javascript)
 
+    def test_import_help_and_conversion_progress_are_visible(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn("DWG To PDF.pc3", markup)
+        self.assertIn("PDFSHX", markup)
+        self.assertIn('id="import-progress"', markup)
+        self.assertIn("function uploadPlanFile(file)", javascript)
+        self.assertIn("Analyse du PDF et conversion SVG", javascript)
+
     def test_measurements_are_persisted_and_use_calibration(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")

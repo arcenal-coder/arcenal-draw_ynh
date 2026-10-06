@@ -20,12 +20,31 @@
           <h1>Ouvrir, calibrer, annoter, exporter.</h1>
           <p>Réutilisez une base existante ou déposez un plan PDF, PNG ou JPEG. Le fichier original reste intact.</p>
         </div>
+        <aside class="pdf-export-guide" aria-labelledby="pdf-export-guide-title">
+          <div>
+            <p class="eyebrow">MODE D’EMPLOI AUTOCAD</p>
+            <h2 id="pdf-export-guide-title">Obtenir un plan fin et lisible</h2>
+            <p class="quick-setting"><strong>Réglage rapide :</strong> choisissez <strong>DWG To PDF.pc3</strong>, décochez <strong>Tracer avec les épaisseurs d’objet</strong>, puis saisissez <strong>PDFSHX = 0</strong>.</p>
+          </div>
+          <ol>
+            <li>Désactivez « Tracer avec les épaisseurs d’objet ».</li>
+            <li>Sinon, utilisez une table CTB avec des traits de 0,05 à 0,10 mm.</li>
+            <li>Saisissez PDFSHX, puis 0, pour éviter les commentaires SHX.</li>
+            <li>Conservez la sortie vectorielle avec DWG To PDF.pc3.</li>
+            <li>Préférez les polices TrueType.</li>
+            <li>Ne transformez pas le plan en image.</li>
+          </ol>
+        </aside>
         <label class="drop-zone" id="drop-zone">
           <input id="plan-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden />
           <span class="drop-icon">＋</span>
           <strong>Déposer un plan PDF, PNG ou JPEG</strong>
           <span>ou cliquer pour choisir un fichier</span>
           <small>Le plan sera calibré en mètres à la première ouverture.</small>
+          <div id="import-progress-wrap" class="import-progress" hidden>
+            <progress id="import-progress" max="100" value="0"></progress>
+            <span id="import-progress-label">Préparation…</span>
+          </div>
           <output id="import-status" class="import-status" role="status" aria-live="polite"></output>
         </label>
         <section class="library-section">

@@ -27,6 +27,9 @@ const canvasHint = document.querySelector('#canvas-hint');
 const calibrationDialog = document.querySelector('#calibration-dialog');
 const settingsDialog = document.querySelector('#settings-dialog');
 const importStatus = document.querySelector('#import-status');
+const importProgressWrap = document.querySelector('#import-progress-wrap');
+const importProgress = document.querySelector('#import-progress');
+const importProgressLabel = document.querySelector('#import-progress-label');
 
 let activeTool = 'select';
 let selectedCircleIds = new Set();
@@ -1346,6 +1349,40 @@ function setImportStatus(message = '', stateName = '') {
   else delete importStatus.dataset.state;
 }
 
+function setImportProgress(phase = 'hidden', value = 0) {
+  importProgressWrap.hidden = phase === 'hidden';
+  if (phase === 'hidden') return;
+  if (phase === 'conversion') importProgress.removeAttribute('value');
+  else importProgress.value = value;
+  importProgressLabel.textContent = phase === 'upload'
+    ? `Envoi du fichier — ${Math.round(value)} %`
+    : phase === 'conversion'
+      ? 'Analyse du PDF et conversion SVG…'
+      : 'Import terminé';
+}
+
+function uploadPlanFile(file) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', apiUrl('imports'));
+    request.responseType = 'json';
+    request.setRequestHeader('Content-Type', 'application/octet-stream');
+    request.setRequestHeader('X-Filename', encodeURIComponent(file.name));
+    request.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) setImportProgress('upload', (event.loaded / event.total) * 100);
+    });
+    request.upload.addEventListener('load', () => setImportProgress('conversion'));
+    request.addEventListener('load', () => {
+      const payload = request.response || {};
+      if (request.status >= 200 && request.status < 300) resolve(payload);
+      else reject(new Error(payload.error || `Erreur serveur ${request.status}`));
+    });
+    request.addEventListener('error', () => reject(new Error('Connexion au serveur interrompue.')));
+    request.addEventListener('abort', () => reject(new Error('Import annulé.')));
+    request.send(file);
+  });
+}
+
 async function handlePlanFile(file) {
   if (!file) return;
   const allowedType = /\.(pdf|png|jpe?g)$/i.test(file.name) && (!file.type || ['application/pdf', 'image/png', 'image/jpeg'].includes(file.type));
@@ -1358,20 +1395,19 @@ async function handlePlanFile(file) {
     return;
   }
   pendingPlanImport = null;
+  setImportProgress('upload', 0);
   setImportStatus(`Import de « ${file.name} » en cours…`, 'busy');
   if (serverAvailable()) {
     document.querySelector('#save-status').textContent = 'Import du plan…';
     try {
-      pendingPlanImport = await apiRequest('imports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) },
-        body: file,
-      });
+      pendingPlanImport = await uploadPlanFile(file);
       if (!pendingPlanImport.previewUrl) throw new Error('Le serveur utilise encore une ancienne version du moteur d’import. Mettez ARCenal DRAW à jour dans YunoHost.');
       document.querySelector('#save-status').textContent = `Plan converti avec ${pendingPlanImport.conversion}`;
+      setImportProgress('complete', 100);
       setImportStatus('Plan converti. Vérifiez maintenant son échelle.', 'success');
     } catch (error) {
       document.querySelector('#save-status').textContent = error.message;
+      setImportProgress('hidden');
       setImportStatus(`Échec de l’import : ${error.message}`, 'error');
       return;
     }
