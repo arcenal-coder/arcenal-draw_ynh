@@ -87,6 +87,9 @@ class FrontendTests(unittest.TestCase):
         self.assertIn('id="zoom-out"', markup)
         self.assertIn('id="zoom-in"', markup)
         self.assertIn("function setPlanZoom(value)", javascript)
+        self.assertIn('id="plan-zoom" type="range" min="100" max="1000"', markup)
+        self.assertIn('id="settings-zoom" type="range" min="100" max="1000"', markup)
+        self.assertIn("Math.max(100, Math.min(1000", javascript)
 
     def test_import_ui_resets_and_plan_library_loads_independently(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")

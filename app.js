@@ -299,6 +299,7 @@ function openEditor() {
   state.projectId ||= uid('project');
   state.panX ||= 0;
   state.panY ||= 0;
+  state.planZoom = Math.max(100, Math.min(1000, Number(state.planZoom) || 100));
   state.planDate ||= new Date().toISOString().slice(0, 10);
   state.location ??= state.baseName || '';
   state.sheetMargin ??= 5;
@@ -1246,7 +1247,7 @@ document.querySelectorAll('[data-open-base]').forEach((button) => button.addEven
 document.querySelector('#back-home').addEventListener('click', openHome);
 document.querySelector('#orientation-select').addEventListener('change', (event) => { setOrientation(event.target.value); saveState(); });
 function setPlanZoom(value) {
-  state.planZoom = Math.max(25, Math.min(800, Number(value) || 100));
+  state.planZoom = Math.max(100, Math.min(1000, Number(value) || 100));
   document.querySelector('#plan-zoom').value = state.planZoom;
   document.querySelector('#settings-zoom').value = state.planZoom;
   updateMapTransform();
@@ -1295,7 +1296,7 @@ sheet.addEventListener('wheel', (event) => {
   const mapX = 150 + (paperX - 150 - state.panX) / oldScale;
   const mapY = 135 + (paperY - 135 - state.panY) / oldScale;
   const zoomStep = state.planZoom < 200 ? 25 : 50;
-  state.planZoom = Math.max(25, Math.min(800, state.planZoom + (event.deltaY < 0 ? zoomStep : -zoomStep)));
+  state.planZoom = Math.max(100, Math.min(1000, state.planZoom + (event.deltaY < 0 ? zoomStep : -zoomStep)));
   const newScale = mapScale();
   state.panX = paperX - 150 - newScale * (mapX - 150);
   state.panY = paperY - 135 - newScale * (mapY - 135);
