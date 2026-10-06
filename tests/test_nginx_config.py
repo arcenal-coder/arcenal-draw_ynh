@@ -50,8 +50,9 @@ class SystemdConfigTests(unittest.TestCase):
         common = (ROOT / "scripts" / "_common.sh").read_text(encoding="utf-8")
         install = (ROOT / "scripts" / "install").read_text(encoding="utf-8")
         upgrade = (ROOT / "scripts" / "upgrade").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "verify.yml").read_text(encoding="utf-8")
 
-        combined = "\n".join((config, manifest, common, install)).lower()
+        combined = "\n".join((config, manifest, common, install, workflow)).lower()
         self.assertNotIn("libredwg", combined)
         self.assertNotIn("dwg2dxf", combined)
         self.assertNotIn("ezdxf", combined)
