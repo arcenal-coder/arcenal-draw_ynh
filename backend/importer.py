@@ -156,3 +156,11 @@ def original_file(upload_id):
         if candidate.is_file():
             return candidate, media_type
     raise FileNotFoundError
+
+
+def delete_import(upload_id):
+    if not upload_id.isalnum() or len(upload_id) != 32:
+        raise ImportErrorSafe("Identifiant d’import invalide.")
+    directory = UPLOAD_DIR / upload_id
+    if directory.is_dir():
+        shutil.rmtree(directory)

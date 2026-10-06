@@ -7,7 +7,7 @@ from http import HTTPStatus
 from urllib.parse import unquote
 
 from backend import db
-from backend.importer import ImportErrorSafe, convert_upload, original_file, preview_file, store_upload
+from backend.importer import ImportErrorSafe, convert_upload, delete_import, original_file, preview_file, store_upload
 
 
 MAX_JSON_BYTES = 12 * 1024 * 1024
@@ -127,10 +127,13 @@ def route(environ, start_response):
         return response(start_response, HTTPStatus.CREATED, {"id": archive_id})
 
     archive_match = re.fullmatch(r"/api/archives/([^/]+)", path)
-    if archive_match and method == "GET":
+    if archive_match and method in {"GET", "DELETE"}:
         archive_id = archive_match.group(1)
         if not ID_PATTERN.fullmatch(archive_id):
             return response(start_response, HTTPStatus.BAD_REQUEST, {"error": "Identifiant invalide."})
+        if method == "DELETE":
+            deleted = db.delete_archive(owner, archive_id)
+            return response(start_response, HTTPStatus.OK, {"deleted": True}) if deleted else response(start_response, HTTPStatus.NOT_FOUND, {"error": "Archive introuvable."})
         archive = db.get_archive(owner, archive_id)
         return response(start_response, HTTPStatus.OK, archive) if archive else response(start_response, HTTPStatus.NOT_FOUND, {"error": "Archive introuvable."})
 
@@ -148,6 +151,14 @@ def route(environ, start_response):
         db.save_plan_file(owner, converted)
         public = {key: value for key, value in converted.items() if key not in {"path", "convertedPath"}}
         return response(start_response, HTTPStatus.CREATED, public)
+
+    import_match = re.fullmatch(r"/api/imports/([a-fA-F0-9]{32})", path)
+    if import_match and method == "DELETE":
+        upload_id = import_match.group(1)
+        if not db.delete_plan_file(owner, upload_id):
+            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Plan introuvable."})
+        delete_import(upload_id)
+        return response(start_response, HTTPStatus.OK, {"deleted": True})
 
     preview_match = re.fullmatch(r"/api/imports/([a-fA-F0-9]{32})/preview", path)
     if preview_match and method == "GET":

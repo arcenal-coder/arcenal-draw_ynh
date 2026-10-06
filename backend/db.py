@@ -168,6 +168,14 @@ def list_plan_files(owner, limit=100):
     return plans
 
 
+def delete_plan_file(owner, plan_id):
+    with connection() as database:
+        cursor = database.execute(
+            "DELETE FROM plan_files WHERE owner = ? AND id = ?", (owner, plan_id)
+        )
+    return cursor.rowcount > 0
+
+
 def get_archive(owner, archive_id):
     with connection() as database:
         row = database.execute(
@@ -178,6 +186,14 @@ def get_archive(owner, archive_id):
     result = dict(row)
     result["state"] = json.loads(result.pop("state_json"))
     return result
+
+
+def delete_archive(owner, archive_id):
+    with connection() as database:
+        cursor = database.execute(
+            "DELETE FROM archives WHERE owner = ? AND id = ?", (owner, archive_id)
+        )
+    return cursor.rowcount > 0
 
 
 def save_archive(owner, archive_id, project_id, export_name, state):

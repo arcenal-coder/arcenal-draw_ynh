@@ -51,6 +51,9 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("source.slice(0, 3)", javascript)
         self.assertIn("allDays.slice(0, 3)", javascript)
         self.assertIn("apiRequest('imports')", javascript)
+        self.assertIn('data-delete-archive', javascript)
+        self.assertIn('data-delete-plan', javascript)
+        self.assertIn("method: 'DELETE'", javascript)
 
 
 if __name__ == "__main__":

@@ -198,7 +198,7 @@ function renderArchives(source = null) {
   container.innerHTML = visibleDays.map((day) => {
     const items = filtered.filter((archive) => archive.exportedAt.startsWith(day));
     if (!items.length) return '';
-    const cards = items.map((archive) => `<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>${escapeText(archive.exportName)}</strong><span>${new Date(archive.exportedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><button type="button" data-open-archive="${archive.id}" data-server="${archive.server}">Ouvrir l’archive</button></div></article>`).join('');
+    const cards = items.map((archive) => `<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>${escapeText(archive.exportName)}</strong><span>${new Date(archive.exportedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><div class="card-actions"><button type="button" data-open-archive="${archive.id}" data-server="${archive.server}">Ouvrir</button><button class="danger-action" type="button" data-delete-archive="${archive.id}" data-server="${archive.server}">Supprimer</button></div></div></article>`).join('');
     return `<section class="archive-date-group"><h3>${new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR', { dateStyle: 'long' })}</h3><div class="card-grid">${cards}</div></section>`;
   }).join('') || '<p class="empty-search">Aucun export ne correspond à cette recherche.</p>';
   container.querySelectorAll('[data-open-archive]').forEach((button) => button.addEventListener('click', async () => {
@@ -206,6 +206,19 @@ function renderArchives(source = null) {
     if (!archive) return;
     state = archive.server ? (await apiRequest(`archives/${encodeURIComponent(archive.id)}`)).state : JSON.parse(JSON.stringify(archive.state));
     openEditor();
+  }));
+  container.querySelectorAll('[data-delete-archive]').forEach((button) => button.addEventListener('click', async () => {
+    const archive = normalized.find((item) => item.id === button.dataset.deleteArchive);
+    if (!archive || !window.confirm(`Supprimer définitivement l’export « ${archive.exportName} » ?`)) return;
+    if (archive.server) {
+      await apiRequest(`archives/${encodeURIComponent(archive.id)}`, { method: 'DELETE' });
+      serverArchives = serverArchives.filter((item) => item.id !== archive.id);
+      renderArchives(serverArchives);
+    } else {
+      const remaining = loadArchives().filter((item) => item.id !== archive.id);
+      localStorage.setItem(ARCHIVE_KEY, JSON.stringify(remaining));
+      renderArchives(remaining);
+    }
   }));
 }
 
@@ -249,10 +262,17 @@ function renderReusablePlans(plans) {
     container.innerHTML = '<article class="plan-card"><div class="plan-thumb"><span>—</span></div><div class="plan-card-body"><strong>Aucun plan importé</strong><span>Vos plans convertis apparaîtront ici.</span></div></article>';
     return;
   }
-  container.innerHTML = plans.map((plan) => `<article class="plan-card"><div class="plan-thumb"><span>${escapeText(plan.extension.replace('.', '').toUpperCase())}</span></div><div class="plan-card-body"><strong>${escapeText(plan.name)}</strong><span>${escapeText(plan.conversion)} · ${new Date(plan.createdAt).toLocaleDateString('fr-FR')}</span><button type="button" data-reuse-plan="${plan.id}">Créer un projet</button></div></article>`).join('');
+  container.innerHTML = plans.map((plan) => `<article class="plan-card"><div class="plan-thumb"><span>${escapeText(plan.extension.replace('.', '').toUpperCase())}</span></div><div class="plan-card-body"><strong>${escapeText(plan.name)}</strong><span>${escapeText(plan.conversion)} · ${new Date(plan.createdAt).toLocaleDateString('fr-FR')}</span><div class="card-actions"><button type="button" data-reuse-plan="${plan.id}">Créer un projet</button><button class="danger-action" type="button" data-delete-plan="${plan.id}">Supprimer</button></div></div></article>`).join('');
   container.querySelectorAll('[data-reuse-plan]').forEach((button) => button.addEventListener('click', () => {
     pendingPlanImport = plans.find((plan) => plan.id === button.dataset.reusePlan);
     if (pendingPlanImport) openCalibration(pendingPlanImport.name);
+  }));
+  container.querySelectorAll('[data-delete-plan]').forEach((button) => button.addEventListener('click', async () => {
+    const plan = plans.find((item) => item.id === button.dataset.deletePlan);
+    if (!plan || !window.confirm(`Supprimer définitivement « ${plan.name} » ? Les projets qui utilisent encore ce fichier ne pourront plus afficher le fond de plan.`)) return;
+    await apiRequest(`imports/${encodeURIComponent(plan.id)}`, { method: 'DELETE' });
+    reusablePlans = reusablePlans.filter((item) => item.id !== plan.id);
+    renderReusablePlans(reusablePlans);
   }));
 }
 

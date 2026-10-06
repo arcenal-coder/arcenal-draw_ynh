@@ -57,6 +57,11 @@ class BackendTest(unittest.TestCase):
         status, archive = self.call("GET", "/api/archives/archive-1")
         self.assertEqual(status, 200)
         self.assertEqual(archive["state"]["name"], "Plan test")
+        status, result = self.call("DELETE", "/api/archives/archive-1")
+        self.assertEqual(status, 200)
+        self.assertTrue(result["deleted"])
+        status, _ = self.call("GET", "/api/archives/archive-1")
+        self.assertEqual(status, 404)
 
     def test_upload_rejects_unknown_format(self):
         status, result = self.call(
@@ -90,6 +95,18 @@ class BackendTest(unittest.TestCase):
         self.assertEqual(status, 200)
         names = {plan["name"] for plan in listing["plans"]}
         self.assertTrue({"plan.png", "plan.jpg"}.issubset(names))
+
+    def test_imported_plan_can_be_deleted(self):
+        status, plan = self.call(
+            "POST", "/api/imports", raw=b"\x89PNG\r\n\x1a\n" + b"0" * 32,
+            headers={"HTTP_X_FILENAME": "a-supprimer.png"},
+        )
+        self.assertEqual(status, 201)
+        status, result = self.call("DELETE", f"/api/imports/{plan['id']}")
+        self.assertEqual(status, 200)
+        self.assertTrue(result["deleted"])
+        status, _ = self.call("GET", f"/api/imports/{plan['id']}/preview")
+        self.assertEqual(status, 404)
 
     def test_pdf_is_kept_native_and_supports_byte_ranges(self):
         content = b"%PDF-1.7\n" + b"0" * 128
