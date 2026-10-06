@@ -83,6 +83,7 @@ function freshState(name = 'Plan de balisage — U662') {
     sheetMargin: 5,
     zoneOpacity: 25,
     showImpactLabels: true,
+    showTitleBlock: true,
     theme: 'system',
     logo: null,
     client: '',
@@ -302,6 +303,7 @@ function openEditor() {
   state.sheetMargin ??= 5;
   state.zoneOpacity ??= 25;
   state.showImpactLabels ??= true;
+  state.showTitleBlock ??= true;
   state.client ??= '';
   state.theme ??= 'system';
   state.author ||= { name: '', role: '', signature: null };
@@ -569,6 +571,8 @@ function visibleInterventionsForTitleBlock() {
 }
 
 function renderTitleBlock() {
+  titleBlock.style.display = state.showTitleBlock ? '' : 'none';
+  if (!state.showTitleBlock) return;
   const visibleInterventions = visibleInterventionsForTitleBlock();
   const count = visibleInterventions.length;
   const width = 82;
@@ -1074,6 +1078,7 @@ function renderLogoSettings() {
   document.querySelector('#settings-zoom').value = state.planZoom;
   document.querySelector('#settings-opacity').value = String(state.zoneOpacity);
   document.querySelector('#settings-labels').checked = state.showImpactLabels;
+  document.querySelector('#settings-title-block').checked = state.showTitleBlock;
   document.querySelector('#client-name').value = state.client;
   document.querySelector('#settings-calibration-status').textContent = document.querySelector('#calibration-status').textContent;
   document.querySelector('#author-name').value = state.author.name;
@@ -1196,6 +1201,7 @@ document.querySelector('#settings-margin').addEventListener('change', (event) =>
 document.querySelector('#settings-zoom').addEventListener('input', (event) => { state.planZoom = Number(event.target.value); document.querySelector('#plan-zoom').value = state.planZoom; updateMapTransform(); renderZones(); renderTitleBlock(); saveState(); });
 document.querySelector('#settings-opacity').addEventListener('change', (event) => { state.zoneOpacity = Number(event.target.value); renderZones(); saveState(); });
 document.querySelector('#settings-labels').addEventListener('change', (event) => { state.showImpactLabels = event.target.checked; renderZones(); saveState(); });
+document.querySelector('#settings-title-block').addEventListener('change', (event) => { state.showTitleBlock = event.target.checked; renderTitleBlock(); saveState(); });
 document.querySelector('#settings-recenter').addEventListener('click', () => { state.panX = 0; state.panY = 0; updateMapTransform(); renderTitleBlock(); saveState(); });
 document.querySelector('#settings-recalibrate').addEventListener('click', () => openCalibration(state.baseName, true));
 document.querySelector('#author-name').addEventListener('change', (event) => { state.author.name = event.target.value; renderTitleBlock(); saveState(); });

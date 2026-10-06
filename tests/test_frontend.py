@@ -55,6 +55,13 @@ class FrontendTests(unittest.TestCase):
         self.assertIn('data-delete-plan', javascript)
         self.assertIn("method: 'DELETE'", javascript)
 
+    def test_title_block_can_be_hidden_and_is_persisted(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="settings-title-block"', markup)
+        self.assertIn("showTitleBlock: true", javascript)
+        self.assertIn("titleBlock.style.display = state.showTitleBlock ? '' : 'none'", javascript)
+
 
 if __name__ == "__main__":
     unittest.main()
