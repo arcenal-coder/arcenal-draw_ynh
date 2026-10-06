@@ -56,6 +56,9 @@ class FrontendTests(unittest.TestCase):
         self.assertEqual(markup.count('>Calibrer</button>'), 2)
         self.assertIn("classList.add('scale-setting')", javascript)
         self.assertIn('x1="-0.45"', javascript)
+        self.assertIn("function metersToPlanUnits(meters)", javascript)
+        self.assertIn("metersToPlanUnits(segmentMeters) * scale", javascript)
+        self.assertIn("element.setAttribute('r', metersToPlanUnits(circle.radius))", javascript)
 
     def test_home_libraries_are_limited_searchable_and_reusable(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")

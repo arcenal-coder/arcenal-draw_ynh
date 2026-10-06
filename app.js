@@ -390,6 +390,19 @@ function mapScale() {
   return state.planZoom / 100;
 }
 
+function metersPerPlanUnit() {
+  const value = Number(state.calibration?.metersPerNativeUnit);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function metersToPlanUnits(meters) {
+  return Number(meters) / metersPerPlanUnit();
+}
+
+function circleGeometry(circle) {
+  return { ...circle, radius: metersToPlanUnits(circle.radius) };
+}
+
 function updateMapTransform() {
   const scale = mapScale();
   mapLayer.setAttribute('transform', `translate(${150 + state.panX} ${135 + state.panY}) scale(${scale}) translate(-150 -135)`);
@@ -566,7 +579,7 @@ function circleIsVisible(circle) {
   const sheetHeight = state.orientation === 'portrait' ? 420 : 297;
   const x = 150 + state.panX + scale * (circle.cx - 150);
   const y = 135 + state.panY + scale * (circle.cy - 135);
-  const radius = circle.radius * scale;
+  const radius = metersToPlanUnits(circle.radius) * scale;
   return x + radius >= 0 && x - radius <= sheetWidth && y + radius >= 0 && y - radius <= sheetHeight;
 }
 
@@ -594,8 +607,8 @@ function renderTitleBlock() {
   const sheetWidth = state.orientation === 'portrait' ? 297 : 420;
   titleBlock.setAttribute('transform', `translate(${sheetWidth - width - state.sheetMargin} ${sheetHeight - height - state.sheetMargin})`);
   const scale = mapScale();
-  const segmentMeters = niceScaleSegment(12 / scale);
-  const segmentWidth = segmentMeters * scale;
+  const segmentMeters = niceScaleSegment((12 * metersPerPlanUnit()) / scale);
+  const segmentWidth = metersToPlanUnits(segmentMeters) * scale;
   const scaleTotal = segmentWidth * 4;
   const displayDate = state.planDate ? new Date(`${state.planDate}T12:00:00`).toLocaleDateString('fr-FR') : '—';
   const rows = visibleInterventions.map((item, index) => {
@@ -686,7 +699,7 @@ function renderOverzones() {
       return true;
     });
     if (!uniqueCenters.length) return;
-    const overCircles = uniqueCenters.map((circle) => ({ ...circle, radius: Math.max(0.1, Number(intervention.overDistance) || 0.1) }));
+    const overCircles = uniqueCenters.map((circle) => ({ ...circle, radius: metersToPlanUnits(Math.max(0.1, Number(intervention.overDistance) || 0.1)) }));
     const element = document.createElementNS(NS, overCircles.length > 1 ? 'path' : 'circle');
     if (overCircles.length > 1) element.setAttribute('d', exactUnionPath(overCircles));
     else {
@@ -711,7 +724,7 @@ function renderZones() {
   impactLayer.innerHTML = '';
   const circlesInMerge = new Set(state.merges.flatMap((merge) => merge.circleIds));
   state.merges.forEach((merge) => {
-    const circles = merge.circleIds.map(circleById).filter(Boolean);
+    const circles = merge.circleIds.map(circleById).filter(Boolean).map(circleGeometry);
     if (!circles.length) return;
     const path = document.createElementNS(NS, 'path');
     path.setAttribute('d', exactUnionPath(circles));
@@ -731,7 +744,7 @@ function renderZones() {
       const element = document.createElementNS(NS, 'circle');
       element.setAttribute('cx', circle.cx);
       element.setAttribute('cy', circle.cy);
-      element.setAttribute('r', circle.radius);
+      element.setAttribute('r', metersToPlanUnits(circle.radius));
       element.setAttribute('fill', circle.color || intervention.color);
       element.setAttribute('fill-opacity', String(state.zoneOpacity / 100));
       element.setAttribute('stroke', circle.color || intervention.color);
@@ -912,6 +925,7 @@ function updateSelectionPanel(message = '') {
 }
 
 function circlesConnected(circles) {
+  circles = circles.map(circleGeometry);
   const reached = new Set([circles[0].id]);
   let changed = true;
   while (changed) {
@@ -1216,6 +1230,8 @@ function confirmCalibration(event) {
   renderScaleGuide();
   calibrationDialog.close();
   renderCalibrationStatus();
+  renderZones();
+  renderTitleBlock();
   canvasHint.textContent = 'Échelle enregistrée. Utilisez Mesure pour la contrôler.';
   saveState();
 }
