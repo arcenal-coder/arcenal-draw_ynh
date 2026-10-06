@@ -42,6 +42,16 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("function placeMeasurement", javascript)
         self.assertIn('id="measurement-layer"', markup)
 
+    def test_scale_setup_uses_two_clicks_and_one_meter_value(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="scale-layer"', markup)
+        self.assertIn("function beginScaleSetup", javascript)
+        self.assertIn("function placeScalePoint", javascript)
+        self.assertIn("realDistance / scaleSetup.nativeDistance", javascript)
+        self.assertNotIn('id="source-unit"', markup)
+        self.assertNotIn('id="native-distance"', markup)
+
     def test_home_libraries_are_limited_searchable_and_reusable(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
