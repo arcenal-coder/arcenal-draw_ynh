@@ -342,6 +342,7 @@ function openEditor() {
 function openHome() {
   saveState();
   scaleSetup = { active: false, points: [], nativeDistance: 0 };
+  document.querySelector('.canvas-area').classList.remove('scale-setting');
   renderScaleGuide();
   editorView.hidden = true;
   homeView.hidden = false;
@@ -1081,7 +1082,7 @@ function renderScaleGuide() {
   scaleLayer.replaceChildren();
   if (!scaleSetup.points.length) return;
   const [first, second] = scaleSetup.points;
-  const cross = (point) => `<g class="scale-guide-cross" transform="translate(${point.x} ${point.y})"><line x1="-0.9" y1="-0.9" x2="0.9" y2="0.9"/><line x1="-0.9" y1="0.9" x2="0.9" y2="-0.9"/></g>`;
+  const cross = (point) => `<g class="scale-guide-cross" transform="translate(${point.x} ${point.y})"><line x1="-0.45" y1="-0.45" x2="0.45" y2="0.45"/><line x1="-0.45" y1="0.45" x2="0.45" y2="-0.45"/></g>`;
   scaleLayer.innerHTML = `${second ? `<line class="scale-guide-line" x1="${first.x}" y1="${first.y}" x2="${second.x}" y2="${second.y}"/>` : ''}${cross(first)}${second ? cross(second) : ''}`;
 }
 
@@ -1199,6 +1200,7 @@ function beginScaleSetup(fileName, recalibration = false) {
     settingsDialog.close();
   }
   scaleSetup = { active: true, points: [], nativeDistance: 0 };
+  document.querySelector('.canvas-area').classList.add('scale-setting');
   renderScaleGuide();
   setTool('select');
   canvasHint.textContent = 'Réglage de l’échelle : cliquez sur le premier point d’une distance connue.';
@@ -1210,6 +1212,7 @@ function confirmCalibration(event) {
   if (!Number.isFinite(realDistance) || realDistance <= 0 || scaleSetup.nativeDistance <= 0) return;
   state.calibration = { sourceUnit: 'm', metersPerNativeUnit: realDistance / scaleSetup.nativeDistance, method: 'two-points' };
   scaleSetup = { active: false, points: [], nativeDistance: 0 };
+  document.querySelector('.canvas-area').classList.remove('scale-setting');
   renderScaleGuide();
   calibrationDialog.close();
   renderCalibrationStatus();
