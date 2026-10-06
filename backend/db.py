@@ -124,6 +124,50 @@ def list_archives(owner, limit=50):
     return [dict(row) for row in rows]
 
 
+def save_plan_file(owner, plan):
+    preview_path = os.path.join(os.path.dirname(plan["path"]), plan["preview"])
+    with connection() as database:
+        database.execute(
+            """
+            INSERT INTO plan_files(id, owner, original_name, media_type, original_path, converted_path, status, error_message, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                original_name = excluded.original_name,
+                media_type = excluded.media_type,
+                original_path = excluded.original_path,
+                converted_path = excluded.converted_path,
+                status = excluded.status,
+                error_message = NULL
+            WHERE plan_files.owner = excluded.owner
+            """,
+            (plan["id"], owner, plan["name"], plan["previewType"], plan["path"], preview_path, plan.get("status", "converted"), utc_now()),
+        )
+
+
+def list_plan_files(owner, limit=100):
+    with connection() as database:
+        rows = database.execute(
+            """SELECT id, original_name, media_type, status, created_at
+               FROM plan_files WHERE owner = ? AND status = 'converted'
+               ORDER BY created_at DESC LIMIT ?""",
+            (owner, limit),
+        ).fetchall()
+    plans = []
+    for row in rows:
+        extension = os.path.splitext(row["original_name"])[1].lower()
+        preview_type = row["media_type"]
+        plans.append({
+            "id": row["id"], "name": row["original_name"], "extension": extension,
+            "requiresCalibration": True, "status": row["status"],
+            "conversion": "PDF vectoriel → SVG" if preview_type == "image/svg+xml" else ("PDF natif optimisé" if preview_type == "application/pdf" else "Image native optimisée"),
+            "previewType": preview_type,
+            "previewUrl": f"imports/{row['id']}/preview",
+            "originalUrl": f"imports/{row['id']}/original",
+            "createdAt": row["created_at"],
+        })
+    return plans
+
+
 def get_archive(owner, archive_id):
     with connection() as database:
         row = database.execute(

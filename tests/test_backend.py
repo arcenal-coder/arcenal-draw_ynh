@@ -86,6 +86,11 @@ class BackendTest(unittest.TestCase):
                 self.assertEqual(result["conversion"], "Image native optimisée")
                 self.assertTrue(result["originalUrl"].endswith("/original"))
 
+        status, listing = self.call("GET", "/api/imports")
+        self.assertEqual(status, 200)
+        names = {plan["name"] for plan in listing["plans"]}
+        self.assertTrue({"plan.png", "plan.jpg"}.issubset(names))
+
     def test_pdf_is_kept_native_and_supports_byte_ranges(self):
         content = b"%PDF-1.7\n" + b"0" * 128
         with mock.patch("backend.importer._convert_pdf_to_svg", return_value=False):

@@ -134,6 +134,9 @@ def route(environ, start_response):
         archive = db.get_archive(owner, archive_id)
         return response(start_response, HTTPStatus.OK, archive) if archive else response(start_response, HTTPStatus.NOT_FOUND, {"error": "Archive introuvable."})
 
+    if path == "/api/imports" and method == "GET":
+        return response(start_response, HTTPStatus.OK, {"plans": db.list_plan_files(owner)})
+
     if path == "/api/imports" and method == "POST":
         filename = unquote(environ.get("HTTP_X_FILENAME") or "plan")
         try:
@@ -142,6 +145,7 @@ def route(environ, start_response):
             raise ImportErrorSafe("Longueur de fichier invalide.") from error
         upload = store_upload(environ["wsgi.input"], filename, length)
         converted = convert_upload(upload)
+        db.save_plan_file(owner, converted)
         public = {key: value for key, value in converted.items() if key not in {"path", "convertedPath"}}
         return response(start_response, HTTPStatus.CREATED, public)
 

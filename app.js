@@ -43,6 +43,9 @@ let pendingFileName = '';
 let pendingPlanImport = null;
 let panSession = null;
 let serverSaveTimer = null;
+let serverProjects = [];
+let serverArchives = [];
+let reusablePlans = [];
 let pdfDocument = null;
 let pdfPage = null;
 let pdfSourceKey = '';
@@ -172,18 +175,36 @@ function loadArchives() {
   try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || []; } catch (error) { return []; }
 }
 
-function renderArchives() {
+function searchableDate(value) {
+  const date = new Date(value);
+  return `${date.toLocaleDateString('fr-FR')} ${date.toLocaleDateString('fr-FR', { dateStyle: 'long' })} ${value || ''}`.toLowerCase();
+}
+
+function renderArchives(source = null) {
   const container = document.querySelector('#export-archives');
-  const archives = loadArchives();
+  const archives = source || loadArchives();
+  const search = document.querySelector('#archive-search');
   if (!archives.length) {
-    container.innerHTML = '<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>Aucun export archivé</strong><span>Chaque export PDF créera automatiquement une copie ici.</span></div></article>';
+    container.innerHTML = '<div class="card-grid"><article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>Aucun export archivé</strong><span>Chaque export PDF créera automatiquement une copie ici.</span></div></article></div>';
+    search.hidden = true;
     return;
   }
-  container.innerHTML = archives.map((archive) => `<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>${escapeText(archive.exportName)}</strong><span>Archivé le ${new Date(archive.exportedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><button type="button" data-open-archive="${archive.id}">Ouvrir l’archive</button></div></article>`).join('');
-  container.querySelectorAll('[data-open-archive]').forEach((button) => button.addEventListener('click', () => {
-    const archive = archives.find((item) => item.id === button.dataset.openArchive);
+  const normalized = archives.map((archive) => ({ ...archive, exportName: archive.exportName || archive.export_name, exportedAt: archive.exportedAt || archive.created_at, server: Boolean(archive.created_at) }));
+  const allDays = [...new Set(normalized.map((archive) => archive.exportedAt.slice(0, 10)))];
+  search.hidden = allDays.length <= 3;
+  const query = search.value.trim().toLowerCase();
+  const visibleDays = query ? allDays : allDays.slice(0, 3);
+  const filtered = normalized.filter((archive) => visibleDays.includes(archive.exportedAt.slice(0, 10)) && (!query || `${archive.exportName} ${searchableDate(archive.exportedAt)}`.toLowerCase().includes(query)));
+  container.innerHTML = visibleDays.map((day) => {
+    const items = filtered.filter((archive) => archive.exportedAt.startsWith(day));
+    if (!items.length) return '';
+    const cards = items.map((archive) => `<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>${escapeText(archive.exportName)}</strong><span>${new Date(archive.exportedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><button type="button" data-open-archive="${archive.id}" data-server="${archive.server}">Ouvrir l’archive</button></div></article>`).join('');
+    return `<section class="archive-date-group"><h3>${new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR', { dateStyle: 'long' })}</h3><div class="card-grid">${cards}</div></section>`;
+  }).join('') || '<p class="empty-search">Aucun export ne correspond à cette recherche.</p>';
+  container.querySelectorAll('[data-open-archive]').forEach((button) => button.addEventListener('click', async () => {
+    const archive = normalized.find((item) => item.id === button.dataset.openArchive);
     if (!archive) return;
-    state = JSON.parse(JSON.stringify(archive.state));
+    state = archive.server ? (await apiRequest(`archives/${encodeURIComponent(archive.id)}`)).state : JSON.parse(JSON.stringify(archive.state));
     openEditor();
   }));
 }
@@ -198,8 +219,20 @@ function loadSavedState() {
   return null;
 }
 
-function renderRecentProjects() {
+function renderRecentProjects(source = null) {
   const container = document.querySelector('#recent-projects');
+  const search = document.querySelector('#project-search');
+  if (source) {
+    search.hidden = source.length <= 3;
+    const query = search.value.trim().toLowerCase();
+    const projects = (query ? source.filter((project) => `${project.name} ${project.location || ''} ${searchableDate(project.updated_at)}`.toLowerCase().includes(query)) : source.slice(0, 3));
+    container.innerHTML = projects.map((project) => `<article class="plan-card"><div class="plan-thumb thumb-u662"><span>☁</span></div><div class="plan-card-body"><strong>${escapeText(project.name)}</strong><span>${escapeText(project.location || 'Sans localisation')} · ${new Date(project.updated_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><button type="button" data-server-project="${project.id}">Ouvrir le projet</button></div></article>`).join('') || '<p class="empty-search">Aucun projet ne correspond à cette recherche.</p>';
+    container.querySelectorAll('[data-server-project]').forEach((button) => button.addEventListener('click', async () => {
+      state = (await apiRequest(`projects/${encodeURIComponent(button.dataset.serverProject)}`)).state;
+      openEditor();
+    }));
+    return;
+  }
   const saved = loadSavedState();
   if (!saved) {
     container.innerHTML = '<article class="plan-card"><div class="plan-thumb"><span>—</span></div><div class="plan-card-body"><strong>Aucun projet enregistré</strong><span>Créez un projet à partir d’une base.</span></div></article>';
@@ -210,28 +243,29 @@ function renderRecentProjects() {
   document.querySelector('#open-saved-project').addEventListener('click', () => { state = saved; openEditor(); });
 }
 
+function renderReusablePlans(plans) {
+  const container = document.querySelector('#exploitable-plans');
+  if (!plans.length) {
+    container.innerHTML = '<article class="plan-card"><div class="plan-thumb"><span>—</span></div><div class="plan-card-body"><strong>Aucun plan importé</strong><span>Vos plans convertis apparaîtront ici.</span></div></article>';
+    return;
+  }
+  container.innerHTML = plans.map((plan) => `<article class="plan-card"><div class="plan-thumb"><span>${escapeText(plan.extension.replace('.', '').toUpperCase())}</span></div><div class="plan-card-body"><strong>${escapeText(plan.name)}</strong><span>${escapeText(plan.conversion)} · ${new Date(plan.createdAt).toLocaleDateString('fr-FR')}</span><button type="button" data-reuse-plan="${plan.id}">Créer un projet</button></div></article>`).join('');
+  container.querySelectorAll('[data-reuse-plan]').forEach((button) => button.addEventListener('click', () => {
+    pendingPlanImport = plans.find((plan) => plan.id === button.dataset.reusePlan);
+    if (pendingPlanImport) openCalibration(pendingPlanImport.name);
+  }));
+}
+
 async function refreshServerLibrary() {
   if (!serverAvailable()) return;
   try {
-    const [projectData, archiveData] = await Promise.all([apiRequest('projects'), apiRequest('archives')]);
-    if (projectData.projects?.length) {
-      const container = document.querySelector('#recent-projects');
-      container.innerHTML = projectData.projects.map((project) => `<article class="plan-card"><div class="plan-thumb thumb-u662"><span>☁</span></div><div class="plan-card-body"><strong>${escapeText(project.name)}</strong><span>${escapeText(project.location || 'Sans localisation')} · ${new Date(project.updated_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><button type="button" data-server-project="${project.id}">Ouvrir le projet</button></div></article>`).join('');
-      container.querySelectorAll('[data-server-project]').forEach((button) => button.addEventListener('click', async () => {
-        const project = await apiRequest(`projects/${encodeURIComponent(button.dataset.serverProject)}`);
-        state = project.state;
-        openEditor();
-      }));
-    }
-    if (archiveData.archives?.length) {
-      const container = document.querySelector('#export-archives');
-      container.innerHTML = archiveData.archives.map((archive) => `<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>${escapeText(archive.export_name)}</strong><span>Archivé le ${new Date(archive.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><button type="button" data-server-archive="${archive.id}">Ouvrir l’archive</button></div></article>`).join('');
-      container.querySelectorAll('[data-server-archive]').forEach((button) => button.addEventListener('click', async () => {
-        const archive = await apiRequest(`archives/${encodeURIComponent(button.dataset.serverArchive)}`);
-        state = archive.state;
-        openEditor();
-      }));
-    }
+    const [projectData, archiveData, planData] = await Promise.all([apiRequest('projects'), apiRequest('archives'), apiRequest('imports')]);
+    serverProjects = projectData.projects || [];
+    serverArchives = archiveData.archives || [];
+    reusablePlans = planData.plans || [];
+    if (serverProjects.length) renderRecentProjects(serverProjects);
+    if (serverArchives.length) renderArchives(serverArchives);
+    renderReusablePlans(reusablePlans);
   } catch (error) {
     console.warn('Bibliothèque serveur indisponible', error);
   }
@@ -1425,6 +1459,8 @@ dropZone.addEventListener('drop', (event) => {
   const file = event.dataTransfer.files[0];
   if (file) handlePlanFile(file);
 });
+document.querySelector('#project-search').addEventListener('input', () => renderRecentProjects(serverProjects));
+document.querySelector('#archive-search').addEventListener('input', () => renderArchives(serverArchives));
 
 applyTheme(loadSavedState()?.theme || state.theme);
 renderRecentProjects();
