@@ -45,11 +45,11 @@ class FrontendTests(unittest.TestCase):
     def test_home_libraries_are_limited_searchable_and_reusable(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
-        self.assertIn('id="project-search"', markup)
+        self.assertNotIn('id="project-search"', markup)
         self.assertIn('id="archive-search"', markup)
         self.assertIn('id="exploitable-plans"', markup)
         self.assertIn("source.slice(0, 3)", javascript)
-        self.assertIn("allDays.slice(0, 3)", javascript)
+        self.assertIn("normalized.slice(0, 3)", javascript)
         self.assertIn("apiRequest('imports')", javascript)
         self.assertIn('data-delete-archive', javascript)
         self.assertIn('data-delete-plan', javascript)

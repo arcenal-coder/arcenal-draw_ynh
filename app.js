@@ -183,7 +183,7 @@ function searchableDate(value) {
 
 function renderArchives(source = null) {
   const container = document.querySelector('#export-archives');
-  const archives = source || loadArchives();
+  const archives = source === null ? loadArchives() : source;
   const search = document.querySelector('#archive-search');
   if (!archives.length) {
     container.innerHTML = '<div class="card-grid"><article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>Aucun export archivé</strong><span>Chaque export PDF créera automatiquement une copie ici.</span></div></article></div>';
@@ -191,11 +191,10 @@ function renderArchives(source = null) {
     return;
   }
   const normalized = archives.map((archive) => ({ ...archive, exportName: archive.exportName || archive.export_name, exportedAt: archive.exportedAt || archive.created_at, server: Boolean(archive.created_at) }));
-  const allDays = [...new Set(normalized.map((archive) => archive.exportedAt.slice(0, 10)))];
-  search.hidden = allDays.length <= 3;
+  search.hidden = normalized.length <= 3;
   const query = search.value.trim().toLowerCase();
-  const visibleDays = query ? allDays : allDays.slice(0, 3);
-  const filtered = normalized.filter((archive) => visibleDays.includes(archive.exportedAt.slice(0, 10)) && (!query || `${archive.exportName} ${searchableDate(archive.exportedAt)}`.toLowerCase().includes(query)));
+  const filtered = query ? normalized.filter((archive) => `${archive.exportName} ${searchableDate(archive.exportedAt)}`.toLowerCase().includes(query)) : normalized.slice(0, 3);
+  const visibleDays = [...new Set(filtered.map((archive) => archive.exportedAt.slice(0, 10)))];
   container.innerHTML = visibleDays.map((day) => {
     const items = filtered.filter((archive) => archive.exportedAt.startsWith(day));
     if (!items.length) return '';
@@ -235,12 +234,9 @@ function loadSavedState() {
 
 function renderRecentProjects(source = null) {
   const container = document.querySelector('#recent-projects');
-  const search = document.querySelector('#project-search');
   if (source) {
-    search.hidden = source.length <= 3;
-    const query = search.value.trim().toLowerCase();
-    const projects = (query ? source.filter((project) => `${project.name} ${project.location || ''} ${searchableDate(project.updated_at)}`.toLowerCase().includes(query)) : source.slice(0, 3));
-    container.innerHTML = projects.map((project) => `<article class="plan-card"><div class="plan-thumb thumb-u662"><span>☁</span></div><div class="plan-card-body"><strong>${escapeText(project.name)}</strong><span>${escapeText(project.location || 'Sans localisation')} · ${new Date(project.updated_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><button type="button" data-server-project="${project.id}">Ouvrir le projet</button></div></article>`).join('') || '<p class="empty-search">Aucun projet ne correspond à cette recherche.</p>';
+    const projects = source.slice(0, 3);
+    container.innerHTML = projects.map((project) => `<article class="plan-card"><div class="plan-thumb thumb-u662"><span>☁</span></div><div class="plan-card-body"><strong>${escapeText(project.name)}</strong><span>${escapeText(project.location || 'Sans localisation')} · ${new Date(project.updated_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><button type="button" data-server-project="${project.id}">Ouvrir le projet</button></div></article>`).join('');
     container.querySelectorAll('[data-server-project]').forEach((button) => button.addEventListener('click', async () => {
       state = (await apiRequest(`projects/${encodeURIComponent(button.dataset.serverProject)}`)).state;
       openEditor();
@@ -1492,7 +1488,6 @@ dropZone.addEventListener('drop', (event) => {
   const file = event.dataTransfer.files[0];
   if (file) handlePlanFile(file);
 });
-document.querySelector('#project-search').addEventListener('input', () => renderRecentProjects(serverProjects));
 document.querySelector('#archive-search').addEventListener('input', () => renderArchives(serverArchives));
 
 applyTheme(loadSavedState()?.theme || state.theme);
