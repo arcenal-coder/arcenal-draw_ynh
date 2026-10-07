@@ -135,8 +135,17 @@ function escapeText(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 }
 
+function projectDisplayName(project = state) {
+  const date = (project.planDate || new Date().toISOString().slice(0, 10)).replaceAll('-', '.');
+  const client = String(project.client || 'CLIENT').trim() || 'CLIENT';
+  const location = String(project.location || 'localisation').trim() || 'localisation';
+  return `${date} ${client} ${location}`.replace(/\s+/g, ' ').trim();
+}
+
 function saveState() {
   state.updatedAt = new Date().toISOString();
+  state.name = projectDisplayName(state);
+  const projectSnapshot = JSON.parse(JSON.stringify(state));
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
@@ -144,7 +153,8 @@ function saveState() {
   }
   document.querySelector('#save-status').textContent = 'Enregistré automatiquement';
   renderRecentProjects();
-  scheduleServerSave();
+  document.querySelector('#project-name').textContent = state.name;
+  scheduleServerSave(projectSnapshot);
 }
 
 function serverAvailable() {
@@ -163,16 +173,16 @@ async function apiRequest(path, options = {}) {
   return payload;
 }
 
-function scheduleServerSave() {
+function scheduleServerSave(projectSnapshot) {
   if (!serverAvailable() || editorView.hidden) return;
   clearTimeout(serverSaveTimer);
   serverSaveTimer = setTimeout(async () => {
-    state.projectId ||= uid('project');
+    projectSnapshot.projectId ||= uid('project');
     try {
-      await apiRequest(`projects/${encodeURIComponent(state.projectId)}`, {
+      await apiRequest(`projects/${encodeURIComponent(projectSnapshot.projectId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state),
+        body: JSON.stringify(projectSnapshot),
       });
       document.querySelector('#save-status').textContent = 'Enregistré sur le serveur';
     } catch (error) {
@@ -213,8 +223,8 @@ function renderArchives(source = null) {
   container.querySelectorAll('[data-open-archive]').forEach((button) => button.addEventListener('click', async () => {
     const archive = normalized.find((item) => item.id === button.dataset.openArchive);
     if (!archive) return;
-    state = archive.server ? (await apiRequest(`archives/${encodeURIComponent(archive.id)}`)).state : JSON.parse(JSON.stringify(archive.state));
-    openEditor();
+    const savedArchive = archive.server ? await apiRequest(`archives/${encodeURIComponent(archive.id)}`) : JSON.parse(JSON.stringify(archive.state));
+    await restoreProject(savedArchive);
   }));
   container.querySelectorAll('[data-delete-archive]').forEach((button) => button.addEventListener('click', async () => {
     const archive = normalized.find((item) => item.id === button.dataset.deleteArchive);
@@ -244,11 +254,10 @@ function loadSavedState() {
 function renderRecentProjects(source = null) {
   const container = document.querySelector('#recent-projects');
   if (source) {
-    const projects = source.slice(0, 3);
+    const projects = source.slice(0, 5);
     container.innerHTML = projects.map((project) => `<article class="plan-card"><div class="plan-thumb thumb-u662"><span>☁</span></div><div class="plan-card-body"><strong>${escapeText(project.name)}</strong><span>${escapeText(project.location || 'Sans localisation')} · ${new Date(project.updated_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><button type="button" data-server-project="${project.id}">Ouvrir le projet</button></div></article>`).join('');
     container.querySelectorAll('[data-server-project]').forEach((button) => button.addEventListener('click', async () => {
-      state = (await apiRequest(`projects/${encodeURIComponent(button.dataset.serverProject)}`)).state;
-      openEditor();
+      await restoreProject(await apiRequest(`projects/${encodeURIComponent(button.dataset.serverProject)}`));
     }));
     return;
   }
@@ -258,8 +267,8 @@ function renderRecentProjects(source = null) {
     return;
   }
   const date = new Date(saved.updatedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-  container.innerHTML = `<article class="plan-card"><div class="plan-thumb thumb-u662"><span>${saved.circles.length}</span></div><div class="plan-card-body"><strong>${escapeText(saved.name)}</strong><span>${saved.circles.length} zone(s) · ${date}</span><button id="open-saved-project">Ouvrir le projet</button></div></article>`;
-  document.querySelector('#open-saved-project').addEventListener('click', () => { state = saved; openEditor(); });
+  container.innerHTML = `<article class="plan-card"><div class="plan-thumb thumb-u662"><span>${saved.circles.length}</span></div><div class="plan-card-body"><strong>${escapeText(projectDisplayName(saved))}</strong><span>${saved.circles.length} zone(s) · ${date}</span><button id="open-saved-project">Ouvrir le projet</button></div></article>`;
+  document.querySelector('#open-saved-project').addEventListener('click', () => restoreProject(saved));
 }
 
 function renderReusablePlans(plans) {
@@ -300,7 +309,27 @@ async function refreshServerLibrary() {
   [projectResult, archiveResult, planResult].filter((result) => result.status === 'rejected').forEach((result) => console.warn('Section de bibliothèque indisponible', result.reason));
 }
 
+async function restoreProject(project) {
+  const restored = project?.state || project;
+  if (!restored || !Array.isArray(restored.interventions)) throw new Error('Projet enregistré incomplet.');
+  if (restored.planFile?.id) {
+    let currentPlan = reusablePlans.find((plan) => plan.id === restored.planFile.id);
+    if (!currentPlan && serverAvailable()) {
+      const response = await apiRequest('imports');
+      reusablePlans = response.plans || [];
+      currentPlan = reusablePlans.find((plan) => plan.id === restored.planFile.id);
+    }
+    if (currentPlan) restored.planFile = { ...restored.planFile, ...currentPlan };
+  }
+  state = restored;
+  clearTimeout(pdfRenderTimer);
+  clearPdfRenderer();
+  openEditor();
+}
+
 function openEditor() {
+  state.circles ||= [];
+  state.merges ||= [];
   state.signals ||= [];
   state.measurements ||= [];
   state.projectId ||= uid('project');
@@ -357,6 +386,7 @@ function openHome() {
   setImportStatus();
   renderRecentProjects();
   renderArchives();
+  renderLogoSettings();
   refreshServerLibrary();
 }
 
@@ -1315,6 +1345,21 @@ function renderLogoSettings() {
   document.querySelector('#logo-preview img').src = state.logo.dataUrl || placeholder;
 }
 
+async function readPdfAsImage(file) {
+  const pdfjs = await import('./assets/pdfjs/pdf.js');
+  pdfjs.GlobalWorkerOptions.workerSrc = './assets/pdfjs/pdf.worker.js';
+  const documentPdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  const page = await documentPdf.getPage(1);
+  const base = page.getViewport({ scale: 1 });
+  const scale = Math.min(2, 900 / Math.max(base.width, base.height));
+  const viewport = page.getViewport({ scale: Math.max(0.5, scale) });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.ceil(viewport.width));
+  canvas.height = Math.max(1, Math.ceil(viewport.height));
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  return canvas.toDataURL('image/png');
+}
+
 function readImageLogo(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1350,7 +1395,7 @@ async function processLogoFile(file) {
 async function processSignatureFile(kind, file) {
   if (!file || !/\.(pdf|png|jpe?g)$/i.test(file.name)) return;
   const signature = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
-    ? { name: file.name, type: 'application/pdf', dataUrl: null }
+    ? { name: file.name, type: 'application/pdf', dataUrl: await readPdfAsImage(file) }
     : { name: file.name, type: file.type || 'image/png', dataUrl: await readImageLogo(file) };
   state[kind].signature = signature;
   renderLogoSettings(); renderTitleBlock(); saveState();
@@ -1839,7 +1884,12 @@ dropZone.addEventListener('drop', (event) => {
 });
 document.querySelector('#archive-search').addEventListener('input', () => renderArchives(serverArchives));
 
-applyTheme(loadSavedState()?.theme || state.theme);
+const initialSavedState = loadSavedState();
+if (initialSavedState) state = initialSavedState;
+state.author ||= { name: '', role: '', signature: null };
+state.validator ||= { name: '', role: '', signature: null };
+applyTheme(state.theme);
+renderLogoSettings();
 renderRecentProjects();
 renderArchives();
 refreshServerLibrary();

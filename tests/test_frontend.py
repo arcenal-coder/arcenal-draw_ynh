@@ -77,12 +77,29 @@ class FrontendTests(unittest.TestCase):
         self.assertNotIn('id="project-search"', markup)
         self.assertIn('id="archive-search"', markup)
         self.assertIn('id="exploitable-plans"', markup)
-        self.assertIn("source.slice(0, 3)", javascript)
+        self.assertIn("source.slice(0, 5)", javascript)
         self.assertIn("normalized.slice(0, 3)", javascript)
         self.assertIn("apiRequest('imports')", javascript)
         self.assertIn('data-delete-archive', javascript)
         self.assertIn('data-delete-plan', javascript)
         self.assertIn("method: 'DELETE'", javascript)
+
+    def test_project_restore_reconciles_the_plan_and_uses_a_snapshot(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("function projectDisplayName", javascript)
+        self.assertIn("const projectSnapshot = JSON.parse(JSON.stringify(state))", javascript)
+        self.assertIn("async function restoreProject(project)", javascript)
+        self.assertIn("restored.planFile?.id", javascript)
+        self.assertIn("restored.planFile = { ...restored.planFile, ...currentPlan }", javascript)
+        self.assertIn("clearPdfRenderer();", javascript)
+
+    def test_author_settings_are_on_home_and_pdf_signatures_are_rendered(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('class="home-author-card"', markup)
+        self.assertEqual(markup.count('id="author-name"'), 1)
+        self.assertIn("async function readPdfAsImage(file)", javascript)
+        self.assertIn("dataUrl: await readPdfAsImage(file)", javascript)
 
     def test_title_block_can_be_hidden_and_is_persisted(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")

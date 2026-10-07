@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>ARCenal DRAW — POC fonctionnel</title>
-    <link rel="stylesheet" href="styles.css?v=0.9.3" />
+    <link rel="stylesheet" href="styles.css?v=0.9.4" />
     <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
   </head>
   <body>
@@ -47,8 +47,14 @@
           </div>
           <output id="import-status" class="import-status" role="status" aria-live="polite"></output>
         </label>
+        <section class="home-author-card" aria-labelledby="home-author-title">
+          <div><p class="eyebrow">CARTOUCHE</p><h2 id="home-author-title">Réalisation du plan</h2><p>Ces informations et la signature seront ajoutées automatiquement au cartouche.</p></div>
+          <div class="home-author-fields"><label>Nom et prénom<input id="author-name" type="text" placeholder="Nom Prénom" /></label><label>Fonction<input id="author-role" type="text" placeholder="Fonction" /></label></div>
+          <label class="signature-drop" id="author-signature-drop"><input id="author-signature-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer la signature</strong><small>PDF, PNG ou JPEG</small></label>
+          <div class="signature-file" id="author-signature-preview" hidden><span>✓</span><strong></strong><button type="button" data-remove-signature="author">Retirer</button></div>
+        </section>
         <section class="library-section">
-          <div class="section-heading"><div><p class="eyebrow">PROJETS</p><h2>Reprendre le travail</h2></div><span>Les 3 plus récents</span></div>
+          <div class="section-heading"><div><p class="eyebrow">PROJETS</p><h2>Reprendre le travail</h2></div><span>Les 5 plus récents</span></div>
           <div class="card-grid" id="recent-projects"></div>
         </section>
         <section class="library-section">
@@ -146,13 +152,6 @@
             </div>
             <div class="settings-actions"><button class="secondary" id="settings-recenter" type="button">Recentrer le plan</button><button class="secondary" id="settings-recalibrate" type="button">Calibrer</button></div>
             <p class="settings-calibration" id="settings-calibration-status"></p>
-            <h2 class="settings-subtitle">Réalisation du plan</h2>
-            <div class="settings-grid">
-              <label>Nom et prénom<input id="author-name" type="text" placeholder="Nom Prénom" /></label>
-              <label>Fonction<input id="author-role" type="text" placeholder="Fonction" /></label>
-            </div>
-            <label class="signature-drop" id="author-signature-drop"><input id="author-signature-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer la signature</strong><small>PDF, PNG ou JPEG</small></label>
-            <div class="signature-file" id="author-signature-preview" hidden><span>✓</span><strong></strong><button type="button" data-remove-signature="author">Retirer</button></div>
             <label class="validator-toggle check-row"><input id="validator-enabled" type="checkbox" /> Ajouter un encas « Validé par »</label>
             <div id="validator-settings" hidden>
               <div class="settings-grid"><label>Nom et prénom<input id="validator-name" type="text" placeholder="Nom Prénom" /></label><label>Fonction<input id="validator-role" type="text" placeholder="Fonction" /></label></div>
@@ -182,6 +181,6 @@
         <div class="dialog-actions"><button type="button" class="primary" id="start-calibration">Calibrer</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=0.9.3"></script>
+    <script src="app.js?v=0.9.4"></script>
   </body>
 </html>
