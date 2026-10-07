@@ -98,6 +98,15 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("Promise.allSettled", javascript)
         self.assertIn("reusablePlans = [pendingPlanImport", javascript)
 
+    def test_navigation_uses_fast_preview_then_deferred_precise_render(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="pdf-surface"', markup)
+        self.assertIn("function scheduleInteractionUpdate()", javascript)
+        self.assertIn("requestAnimationFrame", javascript)
+        self.assertIn("function finalizeNavigation(delay = 140)", javascript)
+        self.assertIn("updatePdfSurfaceTransform();", javascript)
+
 
 if __name__ == "__main__":
     unittest.main()
