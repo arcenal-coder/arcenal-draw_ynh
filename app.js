@@ -14,6 +14,7 @@ const pdfSurface = document.querySelector('#pdf-surface');
 const sheetBackground = document.querySelector('#sheet-background');
 const sheetMargin = document.querySelector('#sheet-margin');
 const mapLayer = document.querySelector('#map-layer');
+const printVectorLayer = document.querySelector('#print-vector-layer');
 const planPreview = document.querySelector('#plan-preview');
 const overzoneLayer = document.querySelector('#overzone-layer');
 const zoneLayer = document.querySelector('#zone-layer');
@@ -303,7 +304,7 @@ function openEditor() {
   state.projectId ||= uid('project');
   state.panX ||= 0;
   state.panY ||= 0;
-  state.planZoom = Math.max(100, Math.min(2000, Number(state.planZoom) || 100));
+  state.planZoom = Math.max(100, Math.min(5000, Number(state.planZoom) || 100));
   state.planDate ||= new Date().toISOString().slice(0, 10);
   state.location ??= state.baseName || '';
   state.sheetMargin ??= 5;
@@ -1369,7 +1370,7 @@ document.querySelectorAll('[data-open-base]').forEach((button) => button.addEven
 document.querySelector('#back-home').addEventListener('click', openHome);
 document.querySelector('#orientation-select').addEventListener('change', (event) => { setOrientation(event.target.value); saveState(); });
 function setPlanZoom(value) {
-  const multiplier = Math.max(1, Math.min(20, Number(value) || 1));
+  const multiplier = Math.max(1, Math.min(50, Number(value) || 1));
   state.planZoom = multiplier * 100;
   document.querySelector('#plan-zoom').value = multiplier;
   document.querySelector('#settings-zoom').value = multiplier;
@@ -1416,7 +1417,7 @@ sheet.addEventListener('wheel', (event) => {
   const mapX = 150 + (paperX - 150 - state.panX) / oldScale;
   const mapY = 135 + (paperY - 135 - state.panY) / oldScale;
   const zoomStep = 50;
-  state.planZoom = Math.max(100, Math.min(2000, state.planZoom + (event.deltaY < 0 ? zoomStep : -zoomStep)));
+  state.planZoom = Math.max(100, Math.min(5000, state.planZoom + (event.deltaY < 0 ? zoomStep : -zoomStep)));
   const newScale = mapScale();
   state.panX = paperX - 150 - newScale * (mapX - 150);
   state.panY = paperY - 135 - newScale * (mapY - 135);
@@ -1612,13 +1613,47 @@ function archiveCurrentExport(exportName) {
   }
 }
 
-document.querySelector('#export-button').addEventListener('click', () => {
+async function prepareVectorExport() {
+  printVectorLayer.replaceChildren();
+  sheetFrame.classList.remove('vector-print-ready');
+  if (state.planFile?.extension !== '.pdf' || !state.planFile?.id) return true;
+  try {
+    document.querySelector('#save-status').textContent = 'Préparation du PDF vectoriel…';
+    const response = await fetch(apiUrl(`imports/${encodeURIComponent(state.planFile.id)}/vector`), { credentials: 'same-origin' });
+    if (!response.ok) throw new Error('Version vectorielle indisponible');
+    const documentSvg = new DOMParser().parseFromString(await response.text(), 'image/svg+xml');
+    const root = documentSvg.documentElement;
+    if (root.nodeName.toLowerCase() !== 'svg' || documentSvg.querySelector('parsererror')) throw new Error('SVG invalide');
+    root.querySelectorAll('script,foreignObject').forEach((element) => element.remove());
+    root.querySelectorAll('*').forEach((element) => [...element.attributes].forEach((attribute) => {
+      if (attribute.name.toLowerCase().startsWith('on')) element.removeAttribute(attribute.name);
+    }));
+    root.setAttribute('x', '0');
+    root.setAttribute('y', '0');
+    root.setAttribute('width', state.orientation === 'portrait' ? '297' : '420');
+    root.setAttribute('height', state.orientation === 'portrait' ? '420' : '297');
+    root.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    printVectorLayer.replaceChildren(document.importNode(root, true));
+    sheetFrame.classList.add('vector-print-ready');
+    return true;
+  } catch (error) {
+    document.querySelector('#save-status').textContent = 'Fond vectoriel indisponible';
+    return window.confirm('Le fond vectoriel ne peut pas être préparé. Continuer avec l’aperçu actuel, de qualité inférieure ?');
+  }
+}
+
+document.querySelector('#export-button').addEventListener('click', async () => {
   saveState();
+  if (!await prepareVectorExport()) return;
   const exportName = exportFileName();
   archiveCurrentExport(exportName);
   const previousTitle = document.title;
   document.title = exportName;
-  window.addEventListener('afterprint', () => { document.title = previousTitle; }, { once: true });
+  window.addEventListener('afterprint', () => {
+    document.title = previousTitle;
+    sheetFrame.classList.remove('vector-print-ready');
+    printVectorLayer.replaceChildren();
+  }, { once: true });
   window.print();
 });
 document.querySelector('#recalibrate-button').addEventListener('click', () => beginScaleSetup(state.baseName, true));

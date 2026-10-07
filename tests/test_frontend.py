@@ -98,9 +98,9 @@ class FrontendTests(unittest.TestCase):
         self.assertIn('id="zoom-out"', markup)
         self.assertIn('id="zoom-in"', markup)
         self.assertIn("function setPlanZoom(value)", javascript)
-        self.assertIn('id="plan-zoom" type="range" min="1" max="20" step="0.5"', markup)
-        self.assertIn('id="settings-zoom" type="range" min="1" max="20" step="0.5"', markup)
-        self.assertIn("Math.max(100, Math.min(2000", javascript)
+        self.assertIn('id="plan-zoom" type="range" min="1" max="50" step="0.5"', markup)
+        self.assertIn('id="settings-zoom" type="range" min="1" max="50" step="0.5"', markup)
+        self.assertIn("Math.max(100, Math.min(5000", javascript)
         self.assertIn("zoomLabel()", javascript)
 
     def test_escape_cancels_current_action_and_selection(self):
@@ -145,6 +145,15 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("window.confirm", javascript)
         self.assertIn("impactedCircleIds", javascript)
         self.assertIn(".title-block-delete", stylesheet)
+
+    def test_pdf_export_uses_a_vector_layer_separate_from_the_screen_preview(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('id="print-vector-layer"', markup)
+        self.assertIn("async function prepareVectorExport()", javascript)
+        self.assertIn("}/vector`), { credentials: 'same-origin' }", javascript)
+        self.assertIn("vector-print-ready", stylesheet)
 
 
 if __name__ == "__main__":

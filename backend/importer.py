@@ -80,7 +80,8 @@ def _preview_result(upload, preview, media_type, conversion):
     }
 
 
-def _convert_pdf_to_svg(source, output, timeout=120):
+def _convert_pdf_to_svg(source, output, timeout=120, max_output_bytes=None):
+    max_output_bytes = MAX_SVG_PREVIEW_BYTES if max_output_bytes is None else max_output_bytes
     executable = shutil.which("pdftocairo")
     if not executable:
         return False
@@ -98,7 +99,7 @@ def _convert_pdf_to_svg(source, output, timeout=120):
         return False
     if not output.is_file() or output.stat().st_size == 0:
         return False
-    if output.stat().st_size > MAX_SVG_PREVIEW_BYTES:
+    if output.stat().st_size > max_output_bytes:
         output.unlink(missing_ok=True)
         return False
     markup = output.read_text(encoding="utf-8", errors="ignore").lower()
@@ -160,6 +161,22 @@ def original_file(upload_id):
         if candidate.is_file():
             return candidate, media_type
     raise FileNotFoundError
+
+
+def vector_file(upload_id):
+    if not upload_id.isalnum() or len(upload_id) != 32:
+        raise ImportErrorSafe("Identifiant d’import invalide.")
+    directory = UPLOAD_DIR / upload_id
+    preview = directory / "preview.svg"
+    if preview.is_file():
+        return preview
+    source = directory / "original.pdf"
+    output = directory / "print.svg"
+    if output.is_file():
+        return output
+    if not source.is_file() or not _convert_pdf_to_svg(source, output, timeout=180, max_output_bytes=100 * 1024 * 1024):
+        raise FileNotFoundError
+    return output
 
 
 def delete_import(upload_id):
