@@ -137,14 +137,22 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("scale(${1 / scale})", javascript)
         self.assertIn("marker.dataset.x = circle.cx", javascript)
 
-    def test_title_block_can_delete_a_team_and_its_impacts(self):
+    def test_editable_team_card_can_delete_a_team_and_its_impacts(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         stylesheet = (ROOT / "styles.css").read_text(encoding="utf-8")
         self.assertIn('data-delete-intervention=', javascript)
         self.assertIn("function deleteIntervention(interventionId)", javascript)
         self.assertIn("window.confirm", javascript)
         self.assertIn("impactedCircleIds", javascript)
-        self.assertIn(".title-block-delete", stylesheet)
+        self.assertIn(".intervention-delete", stylesheet)
+        self.assertNotIn(".title-block-delete", stylesheet)
+
+    def test_team_codes_are_not_displayed_and_overzone_settings_are_conditional(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertNotIn("${item.code} —", javascript)
+        self.assertNotIn("${intervention?.code || ''}", javascript)
+        self.assertIn("Ajouter un surbalisage</label>${overzoneSettings}", javascript)
+        self.assertNotIn("Ajouter un surbalisage à chaque impact", javascript)
 
     def test_pdf_export_uses_a_vector_layer_separate_from_the_screen_preview(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
@@ -154,6 +162,7 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("async function prepareVectorExport()", javascript)
         self.assertIn("}/vector`), { credentials: 'same-origin' }", javascript)
         self.assertIn("vector-print-ready", stylesheet)
+        self.assertNotIn("Continuer avec l’aperçu actuel", javascript)
 
 
 if __name__ == "__main__":

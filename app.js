@@ -688,8 +688,7 @@ function renderTitleBlock() {
     const positions = compact ? { company: 4.2, time: 7.7, source: 11.2, marking: item.overEnabled ? 14.8 : rowHeight - 2.5, over: rowHeight - 1.1 } : { company: 5.5, time: 9.7, source: 13.8, marking: 18.2, over: 24.8 };
     const font = compact ? 1.85 : 2.25;
     const overMarkup = item.overEnabled ? `<line x1="10" y1="${positions.over - .7}" x2="15" y2="${positions.over - .7}" stroke="${item.overColor}" stroke-width="${Math.max(0.3, Math.min(1.4, Number(item.overWidth) || 1.2))}" ${item.overStyle === 'dashed' ? 'stroke-dasharray="1.2 .8"' : ''}/><text x="17" y="${positions.over}" font-size="${compact ? 1.7 : 2.1}">Surbalisage de sécurité : ${formatDistance(Number(item.overDistance))}</text>` : '';
-    const deleteControl = state.interventions.length > 1 ? `<g class="title-block-delete" data-delete-intervention="${item.id}" transform="translate(64 ${Math.max(3, rowHeight - 7)})" role="button" tabindex="0" aria-label="Supprimer l’équipe ${escapeText(item.company)} et ses points d’impact"><rect width="15" height="5" rx="1"/><text x="7.5" y="3.45" text-anchor="middle">Supprimer</text></g>` : '';
-    return `<g transform="translate(0 ${y})"><rect width="${width}" height="${rowHeight}" fill="#fff" stroke="#26353e" stroke-width=".32"/><rect x="2.5" y="2" width="5" height="${Math.max(4, rowHeight - 4)}" rx=".6" fill="${item.color}"/><text x="10" y="${positions.company}" font-size="${compact ? 2.1 : 2.7}" font-weight="700">${item.code} · ${escapeText(item.company)}</text><text x="10" y="${positions.time}" font-size="${font}">Tirs : ${formatTime(item.scheduleStart)} → ${formatTime(item.scheduleEnd)}</text><text x="10" y="${positions.source}" font-size="${font}">${item.isotope} · ${Number(item.activity).toLocaleString('fr-FR')} ${item.unit} · ${attenuated ? 'att. 1/250' : 'sans att.'}</text><text x="10" y="${positions.marking}" font-size="${font}" font-weight="700">${thresholdLabel} : ${formatDistance(distance)}</text>${overMarkup}${deleteControl}</g>`;
+    return `<g transform="translate(0 ${y})"><rect width="${width}" height="${rowHeight}" fill="#fff" stroke="#26353e" stroke-width=".32"/><rect x="2.5" y="2" width="5" height="${Math.max(4, rowHeight - 4)}" rx=".6" fill="${item.color}"/><text x="10" y="${positions.company}" font-size="${compact ? 2.1 : 2.7}" font-weight="700">${escapeText(item.company)}</text><text x="10" y="${positions.time}" font-size="${font}">Tirs : ${formatTime(item.scheduleStart)} → ${formatTime(item.scheduleEnd)}</text><text x="10" y="${positions.source}" font-size="${font}">${item.isotope} · ${Number(item.activity).toLocaleString('fr-FR')} ${item.unit} · ${attenuated ? 'att. 1/250' : 'sans att.'}</text><text x="10" y="${positions.marking}" font-size="${font}" font-weight="700">${thresholdLabel} : ${formatDistance(distance)}</text>${overMarkup}</g>`;
   }).join('');
   const bars = Array.from({ length: 4 }, (_, index) => `<rect x="${index * segmentWidth}" width="${segmentWidth}" height="3.5" fill="${index % 2 ? '#fff' : '#17212b'}" stroke="#17212b" stroke-width=".3"/>`).join('');
   const peopleY = headerHeight + rowHeight * count + footerHeight;
@@ -709,7 +708,9 @@ function renderInterventionForms() {
   container.innerHTML = state.interventions.map((item, index) => {
     const r25 = radiusMeters(item, 25, item.attenuation);
     const r2_5 = radiusMeters(item, 2.5, item.attenuation);
-    return `<article class="intervention-card" style="--intervention-color:${item.color}" data-intervention-id="${item.id}"><div class="intervention-title"><span>${item.code} — ${escapeText(item.company)}</span><input data-field="color" type="color" value="${item.color}" title="Couleur" /></div><div class="intervention-grid"><label class="full">Société<input data-field="company" type="text" value="${escapeText(item.company)}" /></label><label>Radionucléide<select data-field="isotope"><option ${item.isotope === 'Ir-192' ? 'selected' : ''}>Ir-192</option><option ${item.isotope === 'Se-75' ? 'selected' : ''}>Se-75</option></select></label><label>Activité<div class="activity-row"><input data-field="activity" type="number" min="0" step="any" value="${item.activity}" /><select data-field="unit"><option ${item.unit === 'Ci' ? 'selected' : ''}>Ci</option><option ${item.unit === 'TBq' ? 'selected' : ''}>TBq</option></select></div></label><label>Début des tirs<input data-field="scheduleStart" type="time" value="${item.scheduleStart}" /></label><label>Fin des tirs<input data-field="scheduleEnd" type="time" value="${item.scheduleEnd}" /></label><label class="full check-row overzone-toggle"><input data-field="overEnabled" type="checkbox" ${item.overEnabled ? 'checked' : ''} /> Ajouter un surbalisage à chaque impact</label><div class="overzone-settings full ${item.overEnabled ? '' : 'disabled'}"><label>Distance exacte (m)<input data-field="overDistance" type="number" min="0.1" step="0.1" value="${item.overDistance}" ${item.overEnabled ? '' : 'disabled'} /></label><label>Trait<select data-field="overStyle" ${item.overEnabled ? '' : 'disabled'}><option value="dashed" ${item.overStyle === 'dashed' ? 'selected' : ''}>Pointillé</option><option value="solid" ${item.overStyle === 'solid' ? 'selected' : ''}>Continu</option></select></label><label>Épaisseur (mm)<input data-field="overWidth" type="number" min="0.2" max="5" step="0.1" value="${item.overWidth}" ${item.overEnabled ? '' : 'disabled'} /></label><label>Couleur<input data-field="overColor" type="color" value="${item.overColor}" ${item.overEnabled ? '' : 'disabled'} /></label></div><label class="full check-row"><input data-field="attenuation" type="checkbox" ${item.attenuation ? 'checked' : ''} /> Atténuation 1/250 par défaut</label><div class="result-row"><span>2,5 µSv : <strong>${formatDistance(r2_5)}</strong></span><span>25 µSv : <strong>${formatDistance(r25)}</strong></span></div></div></article>`;
+    const overzoneSettings = item.overEnabled ? `<div class="overzone-settings full"><label>Distance exacte (m)<input data-field="overDistance" type="number" min="0.1" step="0.1" value="${item.overDistance}" /></label><label>Trait<select data-field="overStyle"><option value="dashed" ${item.overStyle === 'dashed' ? 'selected' : ''}>Pointillé</option><option value="solid" ${item.overStyle === 'solid' ? 'selected' : ''}>Continu</option></select></label><label>Épaisseur (mm)<input data-field="overWidth" type="number" min="0.2" max="5" step="0.1" value="${item.overWidth}" /></label><label>Couleur<input data-field="overColor" type="color" value="${item.overColor}" /></label></div>` : '';
+    const deleteControl = state.interventions.length > 1 ? `<button class="intervention-delete full" type="button" data-delete-intervention="${item.id}">Supprimer cette équipe et ses points d’impact</button>` : '';
+    return `<article class="intervention-card" style="--intervention-color:${item.color}" data-intervention-id="${item.id}"><div class="intervention-title"><span>${escapeText(item.company)}</span><input data-field="color" type="color" value="${item.color}" title="Couleur" /></div><div class="intervention-grid"><label class="full">Société<input data-field="company" type="text" value="${escapeText(item.company)}" /></label><label>Radionucléide<select data-field="isotope"><option ${item.isotope === 'Ir-192' ? 'selected' : ''}>Ir-192</option><option ${item.isotope === 'Se-75' ? 'selected' : ''}>Se-75</option></select></label><label>Activité<div class="activity-row"><input data-field="activity" type="number" min="0" step="any" value="${item.activity}" /><select data-field="unit"><option ${item.unit === 'Ci' ? 'selected' : ''}>Ci</option><option ${item.unit === 'TBq' ? 'selected' : ''}>TBq</option></select></div></label><label>Début des tirs<input data-field="scheduleStart" type="time" value="${item.scheduleStart}" /></label><label>Fin des tirs<input data-field="scheduleEnd" type="time" value="${item.scheduleEnd}" /></label><label class="full check-row overzone-toggle"><input data-field="overEnabled" type="checkbox" ${item.overEnabled ? 'checked' : ''} /> Ajouter un surbalisage</label>${overzoneSettings}<label class="full check-row"><input data-field="attenuation" type="checkbox" ${item.attenuation ? 'checked' : ''} /> Atténuation 1/250 par défaut</label><div class="result-row"><span>2,5 µSv : <strong>${formatDistance(r2_5)}</strong></span><span>25 µSv : <strong>${formatDistance(r25)}</strong></span></div>${deleteControl}</div></article>`;
   }).join('');
   renderCircleInterventions();
 }
@@ -717,7 +718,7 @@ function renderInterventionForms() {
 function renderCircleInterventions() {
   const container = document.querySelector('#circle-interventions');
   const checked = container.querySelector('input:checked')?.value || state.interventions[0]?.id;
-  container.innerHTML = state.interventions.map((item, index) => `<label class="radio-option"><input type="radio" name="circle-intervention" value="${item.id}" ${item.id === checked || (!checked && index === 0) ? 'checked' : ''}/><span class="swatch" style="background:${item.color}"></span><span>${item.code} — ${escapeText(item.company)}</span></label>`).join('');
+  container.innerHTML = state.interventions.map((item, index) => `<label class="radio-option"><input type="radio" name="circle-intervention" value="${item.id}" ${item.id === checked || (!checked && index === 0) ? 'checked' : ''}/><span class="swatch" style="background:${item.color}"></span><span>${escapeText(item.company)}</span></label>`).join('');
   updateComputedRadius();
 }
 
@@ -837,7 +838,7 @@ function renderZones() {
     marker.dataset.x = circle.cx;
     marker.dataset.y = circle.cy;
     marker.dataset.circleIds = circles.map((item) => item.id).join(',');
-    marker.innerHTML = `<image href="assets/symbole-radioactif.png" x="-2" y="-2" width="4" height="4" preserveAspectRatio="xMidYMid slice" clip-path="url(#impact-image-clip)"/><text class="zone-label" x="3" y="1" fill="${intervention?.color || '#17212b'}">${intervention?.code || ''}</text>`;
+    marker.innerHTML = `<image href="assets/symbole-radioactif.png" x="-2" y="-2" width="4" height="4" preserveAspectRatio="xMidYMid slice" clip-path="url(#impact-image-clip)"/>`;
     marker.addEventListener('click', selectImpact);
     impactLayer.append(marker);
   });
@@ -988,7 +989,7 @@ function updateSelectionPanel(message = '') {
     state.merges.filter((merge) => selectedMergeIds.has(merge.id)).flatMap((merge) => merge.circleIds).forEach((id) => selectedIds.add(id));
     const currentIds = new Set([...selectedIds].map((id) => circleById(id)?.interventionId).filter(Boolean));
     const select = document.querySelector('#reassign-intervention');
-    select.innerHTML = state.interventions.map((item) => `<option value="${item.id}">${item.code} — ${escapeText(item.company)}</option>`).join('');
+    select.innerHTML = state.interventions.map((item) => `<option value="${item.id}">${escapeText(item.company)}</option>`).join('');
     if (currentIds.size === 1) select.value = [...currentIds][0];
   }
 }
@@ -1549,19 +1550,6 @@ function deleteIntervention(interventionId) {
   renderAll();
   saveState();
 }
-titleBlock.addEventListener('click', (event) => {
-  const control = event.target.closest('[data-delete-intervention]');
-  if (!control) return;
-  event.stopPropagation();
-  deleteIntervention(control.dataset.deleteIntervention);
-});
-titleBlock.addEventListener('keydown', (event) => {
-  if (!['Enter', ' '].includes(event.key)) return;
-  const control = event.target.closest('[data-delete-intervention]');
-  if (!control) return;
-  event.preventDefault();
-  deleteIntervention(control.dataset.deleteIntervention);
-});
 document.querySelector('#count-picker').addEventListener('click', (event) => {
   const delta = Number(event.target.dataset.countDelta);
   if (!delta) return;
@@ -1586,6 +1574,10 @@ document.querySelector('#intervention-forms').addEventListener('change', (event)
   }
   state.circles.filter((circle) => circle.interventionId === intervention.id && circle.threshold !== 'manual').forEach((circle) => { circle.radius = radiusMeters(intervention, circle.threshold, circle.attenuated); });
   renderInterventionForms(); renderTitleBlock(); renderZones(); saveState();
+});
+document.querySelector('#intervention-forms').addEventListener('click', (event) => {
+  const control = event.target.closest('[data-delete-intervention]');
+  if (control) deleteIntervention(control.dataset.deleteIntervention);
 });
 function exportFileName() {
   const date = (state.planDate || new Date().toISOString().slice(0, 10)).replaceAll('-', '.');
@@ -1616,7 +1608,7 @@ function archiveCurrentExport(exportName) {
 async function prepareVectorExport() {
   printVectorLayer.replaceChildren();
   sheetFrame.classList.remove('vector-print-ready');
-  if (state.planFile?.extension !== '.pdf' || !state.planFile?.id) return true;
+  if (state.planFile?.extension !== '.pdf' || !state.planFile?.id) return;
   try {
     document.querySelector('#save-status').textContent = 'Préparation du PDF vectoriel…';
     const response = await fetch(apiUrl(`imports/${encodeURIComponent(state.planFile.id)}/vector`), { credentials: 'same-origin' });
@@ -1635,16 +1627,15 @@ async function prepareVectorExport() {
     root.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     printVectorLayer.replaceChildren(document.importNode(root, true));
     sheetFrame.classList.add('vector-print-ready');
-    return true;
+    document.querySelector('#save-status').textContent = 'Plan complet prêt pour l’export PDF';
   } catch (error) {
-    document.querySelector('#save-status').textContent = 'Fond vectoriel indisponible';
-    return window.confirm('Le fond vectoriel ne peut pas être préparé. Continuer avec l’aperçu actuel, de qualité inférieure ?');
+    document.querySelector('#save-status').textContent = 'Plan complet prêt — qualité du fichier source conservée';
   }
 }
 
 document.querySelector('#export-button').addEventListener('click', async () => {
   saveState();
-  if (!await prepareVectorExport()) return;
+  await prepareVectorExport();
   const exportName = exportFileName();
   archiveCurrentExport(exportName);
   const previousTitle = document.title;

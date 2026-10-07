@@ -29,8 +29,8 @@ class NginxConfigTests(unittest.TestCase):
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
 
         self.assertIn('Cache-Control "no-cache, must-revalidate"', nginx)
-        self.assertIn('styles.css?v=0.9.1', markup)
-        self.assertIn('app.js?v=0.9.1', markup)
+        self.assertIn('styles.css?v=0.9.2', markup)
+        self.assertIn('app.js?v=0.9.2', markup)
 
     def test_demo_plan_is_not_shipped(self):
         app = (ROOT / "app.js").read_text(encoding="utf-8")
