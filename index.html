@@ -68,7 +68,7 @@
         <div class="project-heading"><strong id="project-name">Plan de balisage — U662</strong><span id="save-status">Enregistré</span></div>
         <div class="header-actions">
           <label>Orientation<select id="orientation-select"><option value="landscape">A3 paysage</option><option value="portrait">A3 portrait</option></select></label>
-          <div class="zoom-field"><span>Zoom du plan</span><div class="zoom-control"><button id="zoom-out" type="button" aria-label="Réduire le zoom">−</button><input id="plan-zoom" type="range" min="100" max="1000" step="25" value="100" /><button id="zoom-in" type="button" aria-label="Augmenter le zoom">+</button></div><output id="plan-zoom-value">100 %</output></div>
+          <div class="zoom-field"><span>Zoom du plan</span><div class="zoom-control"><button id="zoom-out" type="button" aria-label="Réduire le zoom">−</button><input id="plan-zoom" type="range" min="1" max="20" step="0.5" value="1" /><button id="zoom-in" type="button" aria-label="Augmenter le zoom">+</button></div><output id="plan-zoom-value">1×</output></div>
           <button class="secondary" id="recalibrate-button">Calibrer</button>
           <button class="secondary" id="settings-button">⚙ Paramètres</button>
           <button class="primary" id="export-button">Exporter PDF</button>
@@ -133,9 +133,8 @@
               <label class="full">Apparence<select id="settings-theme"><option value="system">Système</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
               <label>Orientation<select id="settings-orientation"><option value="landscape">A3 paysage</option><option value="portrait">A3 portrait</option></select></label>
               <label>Marge papier<input id="settings-margin" type="number" min="5" max="20" step="1" value="5" /></label>
-              <label class="full">Zoom réel du plan<input id="settings-zoom" type="range" min="100" max="1000" step="25" /></label>
+              <label class="full">Zoom du plan — 1× à 20×<input id="settings-zoom" type="range" min="1" max="20" step="0.5" /></label>
               <label>Transparence des zones<select id="settings-opacity"><option value="0">0 %</option><option value="25">25 %</option><option value="50">50 %</option><option value="75">75 %</option></select></label>
-              <label class="check-row"><input id="settings-labels" type="checkbox" checked /> Codes A–E visibles</label>
               <label class="check-row full"><input id="settings-title-block" type="checkbox" checked /> Afficher le cartouche sur le plan et le PDF</label>
             </div>
             <div class="settings-actions"><button class="secondary" id="settings-recenter" type="button">Recentrer le plan</button><button class="secondary" id="settings-recalibrate" type="button">Calibrer</button></div>

@@ -88,7 +88,6 @@ function freshState(name = 'Plan de balisage — U662') {
     planDate: new Date().toISOString().slice(0, 10),
     sheetMargin: 5,
     zoneOpacity: 25,
-    showImpactLabels: true,
     showTitleBlock: true,
     theme: 'system',
     logo: null,
@@ -303,12 +302,11 @@ function openEditor() {
   state.projectId ||= uid('project');
   state.panX ||= 0;
   state.panY ||= 0;
-  state.planZoom = Math.max(100, Math.min(1000, Number(state.planZoom) || 100));
+  state.planZoom = Math.max(100, Math.min(2000, Number(state.planZoom) || 100));
   state.planDate ||= new Date().toISOString().slice(0, 10);
   state.location ??= state.baseName || '';
   state.sheetMargin ??= 5;
   state.zoneOpacity ??= 25;
-  state.showImpactLabels ??= true;
   state.showTitleBlock ??= true;
   state.client ??= '';
   state.theme ??= 'system';
@@ -335,7 +333,7 @@ function openEditor() {
   pendingMeasurementPoint = null;
   document.querySelector('#project-name').textContent = state.name;
   document.querySelector('#orientation-select').value = state.orientation;
-  document.querySelector('#plan-zoom').value = state.planZoom;
+  document.querySelector('#plan-zoom').value = state.planZoom / 100;
   document.querySelector('#plan-date').value = state.planDate;
   document.querySelector('#plan-location').value = state.location;
   applyTheme(state.theme);
@@ -395,6 +393,10 @@ function mapScale() {
   return state.planZoom / 100;
 }
 
+function zoomLabel() {
+  return `${mapScale().toLocaleString('fr-FR', { maximumFractionDigits: 1 })}×`;
+}
+
 function metersPerPlanUnit() {
   const value = Number(state.calibration?.metersPerNativeUnit);
   return Number.isFinite(value) && value > 0 ? value : 1;
@@ -411,7 +413,7 @@ function circleGeometry(circle) {
 function updateMapTransform() {
   const scale = mapScale();
   mapLayer.setAttribute('transform', `translate(${150 + state.panX} ${135 + state.panY}) scale(${scale}) translate(-150 -135)`);
-  document.querySelector('#plan-zoom-value').textContent = `${state.planZoom} %`;
+  document.querySelector('#plan-zoom-value').textContent = zoomLabel();
   if (state.planFile?.previewType === 'application/pdf') {
     updatePdfSurfaceTransform();
     queuePdfRender(140);
@@ -826,7 +828,7 @@ function renderZones() {
     marker.setAttribute('class', 'impact-marker');
     marker.setAttribute('transform', `translate(${circle.cx} ${circle.cy}) scale(${1 / mapScale()})`);
     marker.dataset.circleIds = circles.map((item) => item.id).join(',');
-    marker.innerHTML = `<image href="assets/symbole-radioactif.png" x="-2" y="-2" width="4" height="4" preserveAspectRatio="xMidYMid slice" clip-path="url(#impact-image-clip)"/>${state.showImpactLabels ? `<text class="zone-label" x="3" y="1" fill="${intervention?.color || '#17212b'}">${intervention?.code || ''}</text>` : ''}`;
+    marker.innerHTML = `<image href="assets/symbole-radioactif.png" x="-2" y="-2" width="4" height="4" preserveAspectRatio="xMidYMid slice" clip-path="url(#impact-image-clip)"/><text class="zone-label" x="3" y="1" fill="${intervention?.color || '#17212b'}">${intervention?.code || ''}</text>`;
     marker.addEventListener('click', selectImpact);
     impactLayer.append(marker);
   });
@@ -1090,6 +1092,25 @@ function setTool(tool) {
   renderMeasurements();
 }
 
+function cancelCurrentAction() {
+  panSession = null;
+  clearTimeout(interactionFinalizeTimer);
+  document.querySelector('.canvas-area').classList.remove('panning', 'scale-setting');
+  scaleSetup = { active: false, points: [], nativeDistance: 0 };
+  if (calibrationDialog.open) calibrationDialog.close();
+  if (settingsDialog.open) settingsDialog.close();
+  selectedCircleIds.clear();
+  selectedMergeIds.clear();
+  selectedSignalIds.clear();
+  selectedOverzoneKeys.clear();
+  selectedMeasurementIds.clear();
+  pendingMeasurementPoint = null;
+  setTool('select');
+  renderScaleGuide();
+  renderZones();
+  updateSelectionPanel();
+}
+
 function openSettings() {
   renderLogoSettings();
   if (!settingsDialog.open) settingsDialog.showModal();
@@ -1191,9 +1212,8 @@ function handleScaleClick(event) {
 function renderLogoSettings() {
   document.querySelector('#settings-orientation').value = state.orientation;
   document.querySelector('#settings-margin').value = state.sheetMargin;
-  document.querySelector('#settings-zoom').value = state.planZoom;
+  document.querySelector('#settings-zoom').value = state.planZoom / 100;
   document.querySelector('#settings-opacity').value = String(state.zoneOpacity);
-  document.querySelector('#settings-labels').checked = state.showImpactLabels;
   document.querySelector('#settings-title-block').checked = state.showTitleBlock;
   document.querySelector('#client-name').value = state.client;
   document.querySelector('#settings-calibration-status').textContent = document.querySelector('#calibration-status').textContent;
@@ -1304,15 +1324,16 @@ document.querySelectorAll('[data-open-base]').forEach((button) => button.addEven
 document.querySelector('#back-home').addEventListener('click', openHome);
 document.querySelector('#orientation-select').addEventListener('change', (event) => { setOrientation(event.target.value); saveState(); });
 function setPlanZoom(value) {
-  state.planZoom = Math.max(100, Math.min(1000, Number(value) || 100));
-  document.querySelector('#plan-zoom').value = state.planZoom;
-  document.querySelector('#settings-zoom').value = state.planZoom;
+  const multiplier = Math.max(1, Math.min(20, Number(value) || 1));
+  state.planZoom = multiplier * 100;
+  document.querySelector('#plan-zoom').value = multiplier;
+  document.querySelector('#settings-zoom').value = multiplier;
   scheduleInteractionUpdate();
   finalizeNavigation();
 }
 document.querySelector('#plan-zoom').addEventListener('input', (event) => setPlanZoom(event.target.value));
-document.querySelector('#zoom-out').addEventListener('click', (event) => { event.preventDefault(); setPlanZoom(state.planZoom - 25); });
-document.querySelector('#zoom-in').addEventListener('click', (event) => { event.preventDefault(); setPlanZoom(state.planZoom + 25); });
+document.querySelector('#zoom-out').addEventListener('click', (event) => { event.preventDefault(); setPlanZoom(mapScale() - 0.5); });
+document.querySelector('#zoom-in').addEventListener('click', (event) => { event.preventDefault(); setPlanZoom(mapScale() + 0.5); });
 document.querySelectorAll('.tool[data-tool]').forEach((button) => button.addEventListener('click', () => setTool(button.dataset.tool)));
 document.querySelector('#settings-button').addEventListener('click', openSettings);
 document.querySelector('#settings-close').addEventListener('click', () => settingsDialog.close());
@@ -1321,7 +1342,6 @@ document.querySelector('#settings-orientation').addEventListener('change', (even
 document.querySelector('#settings-margin').addEventListener('change', (event) => { state.sheetMargin = Math.max(5, Math.min(20, Number(event.target.value) || 5)); setOrientation(state.orientation); saveState(); });
 document.querySelector('#settings-zoom').addEventListener('input', (event) => setPlanZoom(event.target.value));
 document.querySelector('#settings-opacity').addEventListener('change', (event) => { state.zoneOpacity = Number(event.target.value); renderZones(); saveState(); });
-document.querySelector('#settings-labels').addEventListener('change', (event) => { state.showImpactLabels = event.target.checked; renderZones(); saveState(); });
 document.querySelector('#settings-title-block').addEventListener('change', (event) => { state.showTitleBlock = event.target.checked; renderTitleBlock(); saveState(); });
 document.querySelector('#settings-recenter').addEventListener('click', () => { state.panX = 0; state.panY = 0; updateMapTransform(); renderTitleBlock(); saveState(); });
 document.querySelector('#settings-recalibrate').addEventListener('click', () => beginScaleSetup(state.baseName, true));
@@ -1350,12 +1370,13 @@ sheet.addEventListener('wheel', (event) => {
   const oldScale = mapScale();
   const mapX = 150 + (paperX - 150 - state.panX) / oldScale;
   const mapY = 135 + (paperY - 135 - state.panY) / oldScale;
-  const zoomStep = state.planZoom < 200 ? 25 : 50;
-  state.planZoom = Math.max(100, Math.min(1000, state.planZoom + (event.deltaY < 0 ? zoomStep : -zoomStep)));
+  const zoomStep = 50;
+  state.planZoom = Math.max(100, Math.min(2000, state.planZoom + (event.deltaY < 0 ? zoomStep : -zoomStep)));
   const newScale = mapScale();
   state.panX = paperX - 150 - newScale * (mapX - 150);
   state.panY = paperY - 135 - newScale * (mapY - 135);
-  document.querySelector('#plan-zoom').value = state.planZoom;
+  document.querySelector('#plan-zoom').value = state.planZoom / 100;
+  document.querySelector('#settings-zoom').value = state.planZoom / 100;
   scheduleInteractionUpdate();
   finalizeNavigation();
 }, { passive: false });
@@ -1406,6 +1427,11 @@ function deleteSelection() {
 }
 document.querySelector('#delete-selection').addEventListener('click', deleteSelection);
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !editorView.hidden) {
+    event.preventDefault();
+    cancelCurrentAction();
+    return;
+  }
   if (!['Backspace', 'Delete'].includes(event.key) || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
   if (selectedCircleIds.size + selectedMergeIds.size + selectedSignalIds.size + selectedOverzoneKeys.size + selectedMeasurementIds.size === 0) return;
   event.preventDefault();

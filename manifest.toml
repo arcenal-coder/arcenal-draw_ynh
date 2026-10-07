@@ -4,7 +4,7 @@ id = "arcenal_draw"
 name = "ARCenal DRAW"
 description.fr = "Création et archivage de plans de contrôle gammagraphique"
 description.en = "Create and archive gamma radiography control plans"
-version = "0.8.5~ynh1"
+version = "0.8.6~ynh1"
 maintainers = ["ARCenal"]
 
 [upstream]

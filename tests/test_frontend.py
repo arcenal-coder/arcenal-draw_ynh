@@ -87,9 +87,22 @@ class FrontendTests(unittest.TestCase):
         self.assertIn('id="zoom-out"', markup)
         self.assertIn('id="zoom-in"', markup)
         self.assertIn("function setPlanZoom(value)", javascript)
-        self.assertIn('id="plan-zoom" type="range" min="100" max="1000"', markup)
-        self.assertIn('id="settings-zoom" type="range" min="100" max="1000"', markup)
-        self.assertIn("Math.max(100, Math.min(1000", javascript)
+        self.assertIn('id="plan-zoom" type="range" min="1" max="20" step="0.5"', markup)
+        self.assertIn('id="settings-zoom" type="range" min="1" max="20" step="0.5"', markup)
+        self.assertIn("Math.max(100, Math.min(2000", javascript)
+        self.assertIn("zoomLabel()", javascript)
+
+    def test_escape_cancels_current_action_and_selection(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("function cancelCurrentAction()", javascript)
+        self.assertIn("event.key === 'Escape'", javascript)
+        self.assertIn("setTool('select');", javascript)
+
+    def test_obsolete_impact_code_setting_is_removed(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertNotIn('id="settings-labels"', markup)
+        self.assertNotIn("showImpactLabels", javascript)
 
     def test_import_ui_resets_and_plan_library_loads_independently(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
