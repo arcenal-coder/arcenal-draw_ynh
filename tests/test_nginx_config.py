@@ -24,6 +24,14 @@ class NginxConfigTests(unittest.TestCase):
         self.assertTrue((ROOT / "assets" / "pdfjs" / "pdf.worker.js").is_file())
         self.assertNotIn(".mjs", app)
 
+    def test_frontend_is_revalidated_after_each_upgrade(self):
+        nginx = (ROOT / "conf" / "nginx.conf").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+
+        self.assertIn('Cache-Control "no-cache, must-revalidate"', nginx)
+        self.assertIn('styles.css?v=0.8.7', markup)
+        self.assertIn('app.js?v=0.8.7', markup)
+
     def test_demo_plan_is_not_shipped(self):
         app = (ROOT / "app.js").read_text(encoding="utf-8")
         page = (ROOT / "index.html").read_text(encoding="utf-8")
