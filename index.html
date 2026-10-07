@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>ARCenal DRAW — POC fonctionnel</title>
-    <link rel="stylesheet" href="styles.css?v=0.9.2" />
+    <link rel="stylesheet" href="styles.css?v=0.9.3" />
     <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
   </head>
   <body>
@@ -77,6 +77,7 @@
       <main class="workspace">
         <nav class="toolbar" aria-label="Outils">
           <button class="tool active" data-tool="select" title="Sélection" aria-label="Outil Sélection"><span aria-hidden="true">↖</span><small>Sélection</small></button>
+          <button class="tool" data-tool="multiselect" title="Sélection multiple par rectangle" aria-label="Sélectionner plusieurs points d’impact"><span aria-hidden="true">▧</span><small>Multiple</small></button>
           <button class="tool" data-tool="circle" title="Créer un point d’impact" aria-label="Créer un point d’impact"><span aria-hidden="true">◎</span><small>Impact</small></button>
           <button class="tool" data-tool="signal" title="Signalisation" aria-label="Placer un équipement de signalisation"><span aria-hidden="true">⚑</span><small>Signal</small></button>
           <button class="tool" data-tool="measure" title="Mesure" aria-label="Outil de mesure"><span aria-hidden="true">↔</span><small>Mesure</small></button>
@@ -99,6 +100,7 @@
                 <image id="plan-preview" x="0" y="0" width="420" height="297" preserveAspectRatio="xMidYMid meet" hidden />
                 <g id="overzone-layer"></g><g id="zone-layer"></g><g id="impact-layer"></g><g id="signal-layer"></g><g id="measurement-layer"></g><g id="scale-layer"></g>
               </g>
+              <g id="selection-box-layer"></g>
               <g id="title-block"></g>
             </svg>
             <form id="scale-distance-prompt" class="scale-distance-prompt" hidden>
@@ -180,6 +182,6 @@
         <div class="dialog-actions"><button type="button" class="primary" id="start-calibration">Calibrer</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=0.9.2"></script>
+    <script src="app.js?v=0.9.3"></script>
   </body>
 </html>

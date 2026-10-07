@@ -154,6 +154,19 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("Ajouter un surbalisage</label>${overzoneSettings}", javascript)
         self.assertNotIn("Ajouter un surbalisage à chaque impact", javascript)
 
+    def test_box_selection_targets_impact_centers_and_one_company(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('data-tool="multiselect"', markup)
+        self.assertIn('id="selection-box-layer"', markup)
+        self.assertIn("function applyBoxSelection(session)", javascript)
+        self.assertIn("circle.cx >= minX", javascript)
+        self.assertIn("circle.interventionId === interventionId", javascript)
+        self.assertIn("event.shiftKey", javascript)
+        self.assertIn("event.altKey", javascript)
+        self.assertIn(".impact-selection-box", stylesheet)
+
     def test_pdf_export_uses_a_vector_layer_separate_from_the_screen_preview(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")

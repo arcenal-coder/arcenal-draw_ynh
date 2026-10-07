@@ -22,6 +22,7 @@ const impactLayer = document.querySelector('#impact-layer');
 const signalLayer = document.querySelector('#signal-layer');
 const measurementLayer = document.querySelector('#measurement-layer');
 const scaleLayer = document.querySelector('#scale-layer');
+const selectionBoxLayer = document.querySelector('#selection-box-layer');
 const titleBlock = document.querySelector('#title-block');
 const circlePanel = document.querySelector('#circle-panel');
 const selectionPanel = document.querySelector('#selection-panel');
@@ -47,6 +48,7 @@ let pendingFileName = '';
 let pendingPlanImport = null;
 let scaleSetup = { active: false, points: [], nativeDistance: 0 };
 let panSession = null;
+let boxSelectionSession = null;
 let serverSaveTimer = null;
 let serverProjects = [];
 let serverArchives = [];
@@ -1095,15 +1097,18 @@ function setTool(tool) {
   activeTool = tool;
   document.querySelectorAll('.tool').forEach((button) => button.classList.toggle('active', button.dataset.tool === tool));
   circlePanel.hidden = tool !== 'circle';
-  selectionPanel.hidden = tool !== 'select';
+  selectionPanel.hidden = !['select', 'multiselect'].includes(tool);
   signalPanel.hidden = tool !== 'signal';
   document.querySelector('.canvas-area').classList.toggle('can-pan', tool === 'select');
-  canvasHint.textContent = tool === 'circle' ? 'Cliquez sur le point d’impact dans le plan.' : tool === 'signal' ? 'Cliquez pour placer l’équipement de signalisation.' : tool === 'measure' ? 'Cliquez sur le premier point de la mesure.' : 'Glissez le fond pour le déplacer. La molette règle son zoom.';
+  document.querySelector('.canvas-area').classList.toggle('box-selecting', tool === 'multiselect');
+  canvasHint.textContent = tool === 'circle' ? 'Cliquez sur le point d’impact dans le plan.' : tool === 'signal' ? 'Cliquez pour placer un équipement de signalisation.' : tool === 'measure' ? 'Cliquez sur le premier point de la mesure.' : tool === 'multiselect' ? 'Encadrez les points d’impact. Maj ajoute, Alt retire.' : 'Glissez le fond pour le déplacer. La molette règle son zoom.';
   renderMeasurements();
 }
 
 function cancelCurrentAction() {
   panSession = null;
+  boxSelectionSession = null;
+  selectionBoxLayer.replaceChildren();
   clearTimeout(interactionFinalizeTimer);
   document.querySelector('.canvas-area').classList.remove('panning', 'scale-setting');
   scaleSetup = { active: false, points: [], nativeDistance: 0 };
@@ -1133,6 +1138,54 @@ function svgPointFromEvent(event) {
   const paperY = ((event.clientY - box.top) / box.height) * viewBox.height;
   const scale = mapScale();
   return { x: 150 + (paperX - 150 - state.panX) / scale, y: 135 + (paperY - 135 - state.panY) / scale };
+}
+
+function paperPointFromEvent(event) {
+  const box = sheet.getBoundingClientRect();
+  const viewBox = sheet.viewBox.baseVal;
+  return {
+    x: ((event.clientX - box.left) / box.width) * viewBox.width,
+    y: ((event.clientY - box.top) / box.height) * viewBox.height,
+  };
+}
+
+function renderSelectionBox() {
+  selectionBoxLayer.replaceChildren();
+  if (!boxSelectionSession) return;
+  const { startPaper, currentPaper } = boxSelectionSession;
+  const x = Math.min(startPaper.x, currentPaper.x);
+  const y = Math.min(startPaper.y, currentPaper.y);
+  const width = Math.abs(currentPaper.x - startPaper.x);
+  const height = Math.abs(currentPaper.y - startPaper.y);
+  selectionBoxLayer.innerHTML = `<rect class="impact-selection-box" x="${x}" y="${y}" width="${width}" height="${height}"/>`;
+}
+
+function applyBoxSelection(session) {
+  const minX = Math.min(session.startNative.x, session.currentNative.x);
+  const maxX = Math.max(session.startNative.x, session.currentNative.x);
+  const minY = Math.min(session.startNative.y, session.currentNative.y);
+  const maxY = Math.max(session.startNative.y, session.currentNative.y);
+  const mergedCircleIds = new Set(state.merges.flatMap((merge) => merge.circleIds));
+  const candidates = state.circles.filter((circle) => !mergedCircleIds.has(circle.id) && circle.cx >= minX && circle.cx <= maxX && circle.cy >= minY && circle.cy <= maxY);
+  if (!session.add && !session.remove) {
+    selectedCircleIds.clear(); selectedMergeIds.clear(); selectedSignalIds.clear(); selectedOverzoneKeys.clear(); selectedMeasurementIds.clear();
+  }
+  if (!candidates.length) {
+    renderZones();
+    updateSelectionPanel('Aucun point d’impact dans la zone.');
+    return;
+  }
+  const selectedCompanyId = [...selectedCircleIds].map(circleById).find(Boolean)?.interventionId;
+  const anchor = selectedCompanyId ? candidates.find((circle) => circle.interventionId === selectedCompanyId) : candidates.reduce((closest, circle) => {
+    const distance = Math.hypot(circle.cx - session.startNative.x, circle.cy - session.startNative.y);
+    return !closest || distance < closest.distance ? { circle, distance } : closest;
+  }, null)?.circle;
+  const interventionId = selectedCompanyId || anchor?.interventionId;
+  const matching = candidates.filter((circle) => circle.interventionId === interventionId);
+  matching.forEach((circle) => session.remove ? selectedCircleIds.delete(circle.id) : selectedCircleIds.add(circle.id));
+  const company = state.interventions.find((item) => item.id === interventionId)?.company || 'la société sélectionnée';
+  renderZones();
+  updateSelectionPanel(`${selectedCircleIds.size} zone(s) sélectionnée(s) — ${company}.`);
 }
 
 function placeCircle(event) {
@@ -1428,6 +1481,21 @@ sheet.addEventListener('wheel', (event) => {
   finalizeNavigation();
 }, { passive: false });
 sheet.addEventListener('pointerdown', (event) => {
+  if (activeTool === 'multiselect' && event.button === 0 && !event.target.closest('#title-block')) {
+    event.preventDefault();
+    boxSelectionSession = {
+      pointerId: event.pointerId,
+      startPaper: paperPointFromEvent(event),
+      currentPaper: paperPointFromEvent(event),
+      startNative: svgPointFromEvent(event),
+      currentNative: svgPointFromEvent(event),
+      add: event.shiftKey,
+      remove: event.altKey,
+    };
+    sheet.setPointerCapture(event.pointerId);
+    renderSelectionBox();
+    return;
+  }
   if (activeTool !== 'select' || event.button !== 0 || event.target.closest('.zone-circle,.merged-zone,.overzone-circle,.signal-item,.measurement-item,.impact-marker,#title-block')) return;
   const box = sheet.getBoundingClientRect();
   const viewBox = sheet.viewBox.baseVal;
@@ -1436,13 +1504,34 @@ sheet.addEventListener('pointerdown', (event) => {
   document.querySelector('.canvas-area').classList.add('panning');
 });
 sheet.addEventListener('pointermove', (event) => {
+  if (boxSelectionSession?.pointerId === event.pointerId) {
+    boxSelectionSession.currentPaper = paperPointFromEvent(event);
+    boxSelectionSession.currentNative = svgPointFromEvent(event);
+    renderSelectionBox();
+    return;
+  }
   if (!panSession) return;
   state.panX = panSession.panX + (event.clientX - panSession.x) * panSession.ratioX;
   state.panY = panSession.panY + (event.clientY - panSession.y) * panSession.ratioY;
   scheduleInteractionUpdate();
   finalizeNavigation();
 });
-sheet.addEventListener('pointerup', () => {
+sheet.addEventListener('pointerup', (event) => {
+  if (boxSelectionSession?.pointerId === event.pointerId) {
+    const session = boxSelectionSession;
+    boxSelectionSession = null;
+    selectionBoxLayer.replaceChildren();
+    applyBoxSelection(session);
+    return;
+  }
+  if (!panSession) return;
+  panSession = null;
+  document.querySelector('.canvas-area').classList.remove('panning');
+  finalizeNavigation(0);
+});
+sheet.addEventListener('pointercancel', () => {
+  boxSelectionSession = null;
+  selectionBoxLayer.replaceChildren();
   if (!panSession) return;
   panSession = null;
   document.querySelector('.canvas-area').classList.remove('panning');
