@@ -120,6 +120,21 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("function finalizeNavigation(delay = 140)", javascript)
         self.assertIn("updatePdfSurfaceTransform();", javascript)
 
+    def test_impact_marker_keeps_a_constant_visual_size_while_zooming(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("impactLayer.querySelectorAll('.impact-marker')", javascript)
+        self.assertIn("scale(${1 / scale})", javascript)
+        self.assertIn("marker.dataset.x = circle.cx", javascript)
+
+    def test_title_block_can_delete_a_team_and_its_impacts(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('data-delete-intervention=', javascript)
+        self.assertIn("function deleteIntervention(interventionId)", javascript)
+        self.assertIn("window.confirm", javascript)
+        self.assertIn("impactedCircleIds", javascript)
+        self.assertIn(".title-block-delete", stylesheet)
+
 
 if __name__ == "__main__":
     unittest.main()

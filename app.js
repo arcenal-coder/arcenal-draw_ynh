@@ -413,6 +413,9 @@ function circleGeometry(circle) {
 function updateMapTransform() {
   const scale = mapScale();
   mapLayer.setAttribute('transform', `translate(${150 + state.panX} ${135 + state.panY}) scale(${scale}) translate(-150 -135)`);
+  impactLayer.querySelectorAll('.impact-marker').forEach((marker) => {
+    marker.setAttribute('transform', `translate(${marker.dataset.x} ${marker.dataset.y}) scale(${1 / scale})`);
+  });
   document.querySelector('#plan-zoom-value').textContent = zoomLabel();
   if (state.planFile?.previewType === 'application/pdf') {
     updatePdfSurfaceTransform();
@@ -682,7 +685,8 @@ function renderTitleBlock() {
     const positions = compact ? { company: 4.2, time: 7.7, source: 11.2, marking: item.overEnabled ? 14.8 : rowHeight - 2.5, over: rowHeight - 1.1 } : { company: 5.5, time: 9.7, source: 13.8, marking: 18.2, over: 24.8 };
     const font = compact ? 1.85 : 2.25;
     const overMarkup = item.overEnabled ? `<line x1="10" y1="${positions.over - .7}" x2="15" y2="${positions.over - .7}" stroke="${item.overColor}" stroke-width="${Math.max(0.3, Math.min(1.4, Number(item.overWidth) || 1.2))}" ${item.overStyle === 'dashed' ? 'stroke-dasharray="1.2 .8"' : ''}/><text x="17" y="${positions.over}" font-size="${compact ? 1.7 : 2.1}">Surbalisage de sécurité : ${formatDistance(Number(item.overDistance))}</text>` : '';
-    return `<g transform="translate(0 ${y})"><rect width="${width}" height="${rowHeight}" fill="#fff" stroke="#26353e" stroke-width=".32"/><rect x="2.5" y="2" width="5" height="${Math.max(4, rowHeight - 4)}" rx=".6" fill="${item.color}"/><text x="10" y="${positions.company}" font-size="${compact ? 2.1 : 2.7}" font-weight="700">${item.code} · ${escapeText(item.company)}</text><text x="10" y="${positions.time}" font-size="${font}">Tirs : ${formatTime(item.scheduleStart)} → ${formatTime(item.scheduleEnd)}</text><text x="10" y="${positions.source}" font-size="${font}">${item.isotope} · ${Number(item.activity).toLocaleString('fr-FR')} ${item.unit} · ${attenuated ? 'att. 1/250' : 'sans att.'}</text><text x="10" y="${positions.marking}" font-size="${font}" font-weight="700">${thresholdLabel} : ${formatDistance(distance)}</text>${overMarkup}</g>`;
+    const deleteControl = state.interventions.length > 1 ? `<g class="title-block-delete" data-delete-intervention="${item.id}" transform="translate(64 ${Math.max(3, rowHeight - 7)})" role="button" tabindex="0" aria-label="Supprimer l’équipe ${escapeText(item.company)} et ses points d’impact"><rect width="15" height="5" rx="1"/><text x="7.5" y="3.45" text-anchor="middle">Supprimer</text></g>` : '';
+    return `<g transform="translate(0 ${y})"><rect width="${width}" height="${rowHeight}" fill="#fff" stroke="#26353e" stroke-width=".32"/><rect x="2.5" y="2" width="5" height="${Math.max(4, rowHeight - 4)}" rx=".6" fill="${item.color}"/><text x="10" y="${positions.company}" font-size="${compact ? 2.1 : 2.7}" font-weight="700">${item.code} · ${escapeText(item.company)}</text><text x="10" y="${positions.time}" font-size="${font}">Tirs : ${formatTime(item.scheduleStart)} → ${formatTime(item.scheduleEnd)}</text><text x="10" y="${positions.source}" font-size="${font}">${item.isotope} · ${Number(item.activity).toLocaleString('fr-FR')} ${item.unit} · ${attenuated ? 'att. 1/250' : 'sans att.'}</text><text x="10" y="${positions.marking}" font-size="${font}" font-weight="700">${thresholdLabel} : ${formatDistance(distance)}</text>${overMarkup}${deleteControl}</g>`;
   }).join('');
   const bars = Array.from({ length: 4 }, (_, index) => `<rect x="${index * segmentWidth}" width="${segmentWidth}" height="3.5" fill="${index % 2 ? '#fff' : '#17212b'}" stroke="#17212b" stroke-width=".3"/>`).join('');
   const peopleY = headerHeight + rowHeight * count + footerHeight;
@@ -827,6 +831,8 @@ function renderZones() {
     const marker = document.createElementNS(NS, 'g');
     marker.setAttribute('class', 'impact-marker');
     marker.setAttribute('transform', `translate(${circle.cx} ${circle.cy}) scale(${1 / mapScale()})`);
+    marker.dataset.x = circle.cx;
+    marker.dataset.y = circle.cy;
     marker.dataset.circleIds = circles.map((item) => item.id).join(',');
     marker.innerHTML = `<image href="assets/symbole-radioactif.png" x="-2" y="-2" width="4" height="4" preserveAspectRatio="xMidYMid slice" clip-path="url(#impact-image-clip)"/><text class="zone-label" x="3" y="1" fill="${intervention?.color || '#17212b'}">${intervention?.code || ''}</text>`;
     marker.addEventListener('click', selectImpact);
@@ -1486,6 +1492,36 @@ function setInterventionCount(requestedCount) {
   state.interventions = state.interventions.slice(0, count);
   renderAll(); saveState();
 }
+
+function deleteIntervention(interventionId) {
+  if (state.interventions.length <= 1) return;
+  const intervention = state.interventions.find((item) => item.id === interventionId);
+  if (!intervention) return;
+  const impactedCircleIds = new Set(state.circles.filter((circle) => circle.interventionId === interventionId).map((circle) => circle.id));
+  const impactCount = impactedCircleIds.size;
+  if (!window.confirm(`Supprimer l’équipe « ${intervention.company} » et ses ${impactCount} point(s) d’impact ?`)) return;
+  state.circles = state.circles.filter((circle) => !impactedCircleIds.has(circle.id));
+  state.merges = state.merges.filter((merge) => merge.interventionId !== interventionId && !merge.circleIds.some((id) => impactedCircleIds.has(id)));
+  state.suppressedOverzones = state.suppressedOverzones.filter((key) => !key.startsWith(`${interventionId}:`));
+  state.interventions = state.interventions.filter((item) => item.id !== interventionId);
+  state.interventions.forEach((item, index) => { item.code = LETTERS[index]; });
+  selectedCircleIds.clear(); selectedMergeIds.clear(); selectedOverzoneKeys.clear();
+  renderAll();
+  saveState();
+}
+titleBlock.addEventListener('click', (event) => {
+  const control = event.target.closest('[data-delete-intervention]');
+  if (!control) return;
+  event.stopPropagation();
+  deleteIntervention(control.dataset.deleteIntervention);
+});
+titleBlock.addEventListener('keydown', (event) => {
+  if (!['Enter', ' '].includes(event.key)) return;
+  const control = event.target.closest('[data-delete-intervention]');
+  if (!control) return;
+  event.preventDefault();
+  deleteIntervention(control.dataset.deleteIntervention);
+});
 document.querySelector('#count-picker').addEventListener('click', (event) => {
   const delta = Number(event.target.dataset.countDelta);
   if (!delta) return;
