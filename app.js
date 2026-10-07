@@ -26,7 +26,8 @@ const circlePanel = document.querySelector('#circle-panel');
 const selectionPanel = document.querySelector('#selection-panel');
 const signalPanel = document.querySelector('#signal-panel');
 const canvasHint = document.querySelector('#canvas-hint');
-const calibrationDialog = document.querySelector('#calibration-dialog');
+const calibrationIntroDialog = document.querySelector('#calibration-intro-dialog');
+const scaleDistancePrompt = document.querySelector('#scale-distance-prompt');
 const settingsDialog = document.querySelector('#settings-dialog');
 const importStatus = document.querySelector('#import-status');
 const importProgressWrap = document.querySelector('#import-progress-wrap');
@@ -267,7 +268,7 @@ function renderReusablePlans(plans) {
   container.innerHTML = plans.map((plan) => `<article class="plan-card"><div class="plan-thumb"><span>${escapeText(plan.extension.replace('.', '').toUpperCase())}</span></div><div class="plan-card-body"><strong>${escapeText(plan.name)}</strong><span>${escapeText(plan.conversion)} · ${plan.createdAt ? new Date(plan.createdAt).toLocaleDateString('fr-FR') : 'importé'}</span><div class="card-actions"><button type="button" data-reuse-plan="${plan.id}">Créer un projet</button><button class="danger-action" type="button" data-delete-plan="${plan.id}">Supprimer</button></div></div></article>`).join('');
   container.querySelectorAll('[data-reuse-plan]').forEach((button) => button.addEventListener('click', () => {
     pendingPlanImport = plans.find((plan) => plan.id === button.dataset.reusePlan);
-    if (pendingPlanImport) beginScaleSetup(pendingPlanImport.name);
+    if (pendingPlanImport) openPlanProject(pendingPlanImport);
   }));
   container.querySelectorAll('[data-delete-plan]').forEach((button) => button.addEventListener('click', async () => {
     const plan = plans.find((item) => item.id === button.dataset.deletePlan);
@@ -416,6 +417,7 @@ function updateMapTransform() {
   impactLayer.querySelectorAll('.impact-marker').forEach((marker) => {
     marker.setAttribute('transform', `translate(${marker.dataset.x} ${marker.dataset.y}) scale(${1 / scale})`);
   });
+  if (!scaleDistancePrompt.hidden) positionScaleDistancePrompt();
   document.querySelector('#plan-zoom-value').textContent = zoomLabel();
   if (state.planFile?.previewType === 'application/pdf') {
     updatePdfSurfaceTransform();
@@ -1103,7 +1105,7 @@ function cancelCurrentAction() {
   clearTimeout(interactionFinalizeTimer);
   document.querySelector('.canvas-area').classList.remove('panning', 'scale-setting');
   scaleSetup = { active: false, points: [], nativeDistance: 0 };
-  if (calibrationDialog.open) calibrationDialog.close();
+  scaleDistancePrompt.hidden = true;
   if (settingsDialog.open) settingsDialog.close();
   selectedCircleIds.clear();
   selectedMergeIds.clear();
@@ -1185,8 +1187,21 @@ function renderScaleGuide() {
   scaleLayer.innerHTML = `${second ? `<line class="scale-guide-line" x1="${first.x}" y1="${first.y}" x2="${second.x}" y2="${second.y}"/>` : ''}${cross(first)}${second ? cross(second) : ''}`;
 }
 
+function positionScaleDistancePrompt() {
+  if (scaleSetup.points.length < 2) return;
+  const [first, second] = scaleSetup.points;
+  const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+  const scale = mapScale();
+  const paperX = 150 + state.panX + scale * (midpoint.x - 150);
+  const paperY = 135 + state.panY + scale * (midpoint.y - 135);
+  const logicalWidth = state.orientation === 'portrait' ? 297 : 420;
+  const logicalHeight = state.orientation === 'portrait' ? 420 : 297;
+  scaleDistancePrompt.style.left = `${Math.max(12, Math.min(88, paperX / logicalWidth * 100))}%`;
+  scaleDistancePrompt.style.top = `${Math.max(18, Math.min(92, paperY / logicalHeight * 100))}%`;
+}
+
 function placeScalePoint(event) {
-  if (!scaleSetup.active || calibrationDialog.open) return;
+  if (!scaleSetup.active || !scaleDistancePrompt.hidden) return;
   const point = svgPointFromEvent(event);
   scaleSetup.points.push(point);
   renderScaleGuide();
@@ -1202,9 +1217,8 @@ function placeScalePoint(event) {
     canvasHint.textContent = 'Les deux points sont trop proches. Cliquez sur le premier point.';
     return;
   }
-  document.querySelector('#calibration-file').textContent = `Distance repérée sur « ${state.baseName} ». Saisissez uniquement sa longueur réelle.`;
-  document.querySelector('#calibration-result').textContent = 'La valeur sera appliquée à toutes les mesures et zones du plan.';
-  calibrationDialog.showModal();
+  positionScaleDistancePrompt();
+  scaleDistancePrompt.hidden = false;
   document.querySelector('#real-distance').focus();
 }
 
@@ -1287,16 +1301,28 @@ async function processSignatureFile(kind, file) {
   renderLogoSettings(); renderTitleBlock(); saveState();
 }
 
+function openPlanProject(plan) {
+  const fileName = plan.name;
+  state = { ...freshState(`Plan de balisage — ${fileName.replace(/\.(pdf|png|jpe?g)$/i, '')}`), baseName: fileName };
+  state.location = fileName.replace(/\.(pdf|png|jpe?g)$/i, '');
+  state.planFile = plan;
+  if (plan.calibration?.metersPerNativeUnit > 0) state.calibration = { ...plan.calibration };
+  openEditor();
+  saveState();
+  if (plan.calibration?.metersPerNativeUnit > 0) {
+    canvasHint.textContent = 'Échelle de la base appliquée. Le plan est prêt.';
+  } else {
+    calibrationIntroDialog.showModal();
+  }
+}
+
 function beginScaleSetup(fileName, recalibration = false) {
   pendingFileName = fileName;
-  if (!recalibration) {
-    state = { ...freshState(`Plan de balisage — ${fileName.replace(/\.(pdf|png|jpe?g)$/i, '')}`), baseName: fileName };
-    state.location = fileName.replace(/\.(pdf|png|jpe?g)$/i, '');
-    state.planFile = pendingPlanImport;
-    openEditor();
-  } else if (settingsDialog.open) {
+  if (settingsDialog.open) {
     settingsDialog.close();
   }
+  if (calibrationIntroDialog.open) calibrationIntroDialog.close();
+  scaleDistancePrompt.hidden = true;
   scaleSetup = { active: true, points: [], nativeDistance: 0 };
   document.querySelector('.canvas-area').classList.add('scale-setting');
   renderScaleGuide();
@@ -1304,20 +1330,33 @@ function beginScaleSetup(fileName, recalibration = false) {
   canvasHint.textContent = 'Réglage de l’échelle : cliquez sur le premier point d’une distance connue.';
 }
 
-function confirmCalibration(event) {
+async function confirmCalibration(event) {
   event.preventDefault();
   const realDistance = Number(document.querySelector('#real-distance').value);
   if (!Number.isFinite(realDistance) || realDistance <= 0 || scaleSetup.nativeDistance <= 0) return;
   state.calibration = { sourceUnit: 'm', metersPerNativeUnit: realDistance / scaleSetup.nativeDistance, method: 'two-points' };
+  if (state.planFile) state.planFile.calibration = { ...state.calibration };
   scaleSetup = { active: false, points: [], nativeDistance: 0 };
   document.querySelector('.canvas-area').classList.remove('scale-setting');
   renderScaleGuide();
-  calibrationDialog.close();
+  scaleDistancePrompt.hidden = true;
   renderCalibrationStatus();
   renderZones();
   renderTitleBlock();
   canvasHint.textContent = 'Échelle enregistrée. Utilisez Mesure pour la contrôler.';
   saveState();
+  if (serverAvailable() && state.planFile?.id) {
+    try {
+      await apiRequest(`imports/${encodeURIComponent(state.planFile.id)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calibration: state.calibration }),
+      });
+      const reusable = reusablePlans.find((plan) => plan.id === state.planFile.id);
+      if (reusable) reusable.calibration = { ...state.calibration };
+    } catch (error) {
+      document.querySelector('#save-status').textContent = 'Projet calibré — base non mise à jour';
+    }
+  }
 }
 
 document.querySelectorAll('[data-open-base]').forEach((button) => button.addEventListener('click', () => {
@@ -1583,22 +1622,18 @@ document.querySelector('#export-button').addEventListener('click', () => {
   window.print();
 });
 document.querySelector('#recalibrate-button').addEventListener('click', () => beginScaleSetup(state.baseName, true));
-document.querySelector('#calibration-form').addEventListener('submit', confirmCalibration);
-document.querySelector('#cancel-calibration').addEventListener('click', (event) => {
+document.querySelector('#start-calibration').addEventListener('click', () => beginScaleSetup(state.baseName));
+scaleDistancePrompt.addEventListener('submit', confirmCalibration);
+document.querySelector('#restart-calibration').addEventListener('click', (event) => {
   event.preventDefault();
-  calibrationDialog.close();
+  scaleDistancePrompt.hidden = true;
   scaleSetup.points = [];
   scaleSetup.nativeDistance = 0;
   renderScaleGuide();
   canvasHint.textContent = 'Réglage de l’échelle : cliquez sur le premier point d’une distance connue.';
 });
-calibrationDialog.addEventListener('cancel', (event) => {
+calibrationIntroDialog.addEventListener('cancel', (event) => {
   event.preventDefault();
-  calibrationDialog.close();
-  scaleSetup.points = [];
-  scaleSetup.nativeDistance = 0;
-  renderScaleGuide();
-  canvasHint.textContent = 'Réglage de l’échelle : cliquez sur le premier point d’une distance connue.';
 });
 
 const fileInput = document.querySelector('#plan-file');
@@ -1666,7 +1701,7 @@ async function handlePlanFile(file) {
       reusablePlans = [pendingPlanImport, ...reusablePlans.filter((plan) => plan.id !== pendingPlanImport.id)];
       renderReusablePlans(reusablePlans);
       setImportProgress('complete', 100);
-      setImportStatus('Plan converti. Vérifiez maintenant son échelle.', 'success');
+      setImportStatus('Plan converti. Calibrez maintenant son échelle.', 'success');
     } catch (error) {
       document.querySelector('#save-status').textContent = error.message;
       setImportProgress('hidden');
@@ -1674,7 +1709,7 @@ async function handlePlanFile(file) {
       return;
     }
   }
-  beginScaleSetup(file.name);
+  if (pendingPlanImport) openPlanProject(pendingPlanImport);
 }
 fileInput.addEventListener('change', async () => {
   if (fileInput.files[0]) await handlePlanFile(fileInput.files[0]);

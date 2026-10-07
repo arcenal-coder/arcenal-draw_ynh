@@ -66,10 +66,14 @@ def initialize():
                 converted_path TEXT,
                 status TEXT NOT NULL,
                 error_message TEXT,
+                calibration_json TEXT,
                 created_at TEXT NOT NULL
             );
             """
         )
+        columns = {row[1] for row in database.execute("PRAGMA table_info(plan_files)").fetchall()}
+        if "calibration_json" not in columns:
+            database.execute("ALTER TABLE plan_files ADD COLUMN calibration_json TEXT")
 
 
 def list_projects(owner):
@@ -147,7 +151,7 @@ def save_plan_file(owner, plan):
 def list_plan_files(owner, limit=100):
     with connection() as database:
         rows = database.execute(
-            """SELECT id, original_name, media_type, status, created_at
+            """SELECT id, original_name, media_type, status, calibration_json, created_at
                FROM plan_files WHERE owner = ? AND status = 'converted'
                ORDER BY created_at DESC LIMIT ?""",
             (owner, limit),
@@ -156,6 +160,7 @@ def list_plan_files(owner, limit=100):
     for row in rows:
         extension = os.path.splitext(row["original_name"])[1].lower()
         preview_type = row["media_type"]
+        calibration = json.loads(row["calibration_json"]) if row["calibration_json"] else None
         plans.append({
             "id": row["id"], "name": row["original_name"], "extension": extension,
             "requiresCalibration": True, "status": row["status"],
@@ -163,7 +168,7 @@ def list_plan_files(owner, limit=100):
             "previewType": preview_type,
             "previewUrl": f"imports/{row['id']}/preview",
             "originalUrl": f"imports/{row['id']}/original",
-            "createdAt": row["created_at"],
+            "createdAt": row["created_at"], "calibration": calibration,
         })
     return plans
 
@@ -172,6 +177,16 @@ def delete_plan_file(owner, plan_id):
     with connection() as database:
         cursor = database.execute(
             "DELETE FROM plan_files WHERE owner = ? AND id = ?", (owner, plan_id)
+        )
+    return cursor.rowcount > 0
+
+
+def save_plan_calibration(owner, plan_id, calibration):
+    payload = json.dumps(calibration, ensure_ascii=False, separators=(",", ":"))
+    with connection() as database:
+        cursor = database.execute(
+            "UPDATE plan_files SET calibration_json = ? WHERE owner = ? AND id = ?",
+            (payload, owner, plan_id),
         )
     return cursor.rowcount > 0
 

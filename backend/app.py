@@ -153,8 +153,17 @@ def route(environ, start_response):
         return response(start_response, HTTPStatus.CREATED, public)
 
     import_match = re.fullmatch(r"/api/imports/([a-fA-F0-9]{32})", path)
-    if import_match and method == "DELETE":
+    if import_match and method in {"DELETE", "PUT"}:
         upload_id = import_match.group(1)
+        if method == "PUT":
+            data = read_json(environ)
+            calibration = data.get("calibration") or {}
+            factor = calibration.get("metersPerNativeUnit")
+            if not isinstance(factor, (int, float)) or factor <= 0:
+                raise ValueError("Calibrage invalide.")
+            if not db.save_plan_calibration(owner, upload_id, calibration):
+                return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Plan introuvable."})
+            return response(start_response, HTTPStatus.OK, {"calibration": calibration})
         if not db.delete_plan_file(owner, upload_id):
             return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Plan introuvable."})
         delete_import(upload_id)

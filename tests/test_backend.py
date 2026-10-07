@@ -108,6 +108,21 @@ class BackendTest(unittest.TestCase):
         status, _ = self.call("GET", f"/api/imports/{plan['id']}/preview")
         self.assertEqual(status, 404)
 
+    def test_imported_plan_keeps_its_calibration_for_reuse(self):
+        status, plan = self.call(
+            "POST", "/api/imports", raw=b"\x89PNG\r\n\x1a\n" + b"0" * 32,
+            headers={"HTTP_X_FILENAME": "base-calibree.png"},
+        )
+        self.assertEqual(status, 201)
+        calibration = {"sourceUnit": "m", "metersPerNativeUnit": 2.5, "method": "two-points"}
+        status, result = self.call("PUT", f"/api/imports/{plan['id']}", {"calibration": calibration})
+        self.assertEqual(status, 200)
+        self.assertEqual(result["calibration"], calibration)
+        status, listing = self.call("GET", "/api/imports")
+        self.assertEqual(status, 200)
+        saved = next(item for item in listing["plans"] if item["id"] == plan["id"])
+        self.assertEqual(saved["calibration"], calibration)
+
     def test_pdf_is_kept_native_and_supports_byte_ranges(self):
         content = b"%PDF-1.7\n" + b"0" * 128
         with mock.patch("backend.importer._convert_pdf_to_svg", return_value=False):

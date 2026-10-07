@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>ARCenal DRAW — POC fonctionnel</title>
-    <link rel="stylesheet" href="styles.css?v=0.8.8" />
+    <link rel="stylesheet" href="styles.css?v=0.9.0" />
     <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
   </head>
   <body>
@@ -100,6 +100,10 @@
               </g>
               <g id="title-block"></g>
             </svg>
+            <form id="scale-distance-prompt" class="scale-distance-prompt" hidden>
+              <label>Distance réelle <span><input id="real-distance" type="number" min="0.0001" step="any" value="10" inputmode="decimal" /> m</span></label>
+              <div><button type="button" class="secondary" id="restart-calibration">Recommencer</button><button type="submit" class="primary">Valider</button></div>
+            </form>
           </div>
           <div class="canvas-hint" id="canvas-hint">Sélectionnez un outil.</div>
         </section>
@@ -168,14 +172,13 @@
       <footer class="status-bar"><span id="unit-status">Unité interne : mètre</span><span id="calibration-status">Échelle : 1 unité = 1 m</span><span>Feuille = PDF</span></footer>
     </section>
 
-    <dialog id="calibration-dialog">
-      <form method="dialog" id="calibration-form">
-        <p class="eyebrow">ÉCHELLE DU PLAN</p><h2>Indiquer la distance réelle</h2><p id="calibration-file">Deux points ont été placés sur le plan.</p>
-        <label>Distance réelle entre ces deux points, en mètres<input id="real-distance" type="number" min="0.0001" step="any" value="10" inputmode="decimal" /></label>
-        <output id="calibration-result">Distance repérée sur le plan</output>
-        <div class="dialog-actions"><button value="cancel" class="secondary" id="cancel-calibration">Recommencer</button><button value="confirm" class="primary" id="confirm-calibration">Enregistrer l’échelle</button></div>
+    <dialog id="calibration-intro-dialog" class="calibration-intro-dialog">
+      <form method="dialog">
+        <p class="eyebrow">ÉCHELLE DU PLAN</p><h2>Calibrage nécessaire</h2>
+        <p>Avant de commencer, calibrez le plan à partir d’une distance connue.</p>
+        <div class="dialog-actions"><button type="button" class="primary" id="start-calibration">Calibrer</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=0.8.8"></script>
+    <script src="app.js?v=0.9.0"></script>
   </body>
 </html>
