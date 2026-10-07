@@ -25,11 +25,11 @@ class FrontendTests(unittest.TestCase):
         self.assertIn('id="plan-preview"', markup)
         self.assertIn("function fallbackToOriginalPdf()", javascript)
 
-    def test_import_help_and_conversion_progress_are_visible(self):
+    def test_import_hint_and_conversion_progress_are_visible(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
-        self.assertIn("DWG To PDF.pc3", markup)
-        self.assertIn("PDFSHX", markup)
+        self.assertIn('PDF (désactiver « Tracer avec les épaisseurs d’objet »)', markup)
+        self.assertNotIn("MODE D’EMPLOI AUTOCAD", markup)
         self.assertIn('id="import-progress"', markup)
         self.assertIn("function uploadPlanFile(file)", javascript)
         self.assertIn("Analyse du PDF et conversion SVG", javascript)
@@ -100,6 +100,15 @@ class FrontendTests(unittest.TestCase):
         self.assertEqual(markup.count('id="author-name"'), 1)
         self.assertIn("async function readPdfAsImage(file)", javascript)
         self.assertIn("dataUrl: await readPdfAsImage(file)", javascript)
+        self.assertIn("AUTHOR_PROFILE_KEY", javascript)
+        self.assertIn("saveAuthorProfile()", javascript)
+
+    def test_home_waits_for_current_project_save_before_refreshing(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("async function openHome()", javascript)
+        self.assertIn("clearTimeout(serverSaveTimer)", javascript)
+        self.assertIn("await refreshServerLibrary()", javascript)
+        self.assertIn("clearTimeout(serverSaveTimer);\n  const restored", javascript)
 
     def test_title_block_can_be_hidden_and_is_persisted(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")

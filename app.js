@@ -1,6 +1,7 @@
 const NS = 'http://www.w3.org/2000/svg';
 const STORAGE_KEY = 'arcenal-draw-poc-v2';
 const ARCHIVE_KEY = 'arcenal-draw-export-archives-v1';
+const AUTHOR_PROFILE_KEY = 'arcenal-draw-author-profile-v1';
 const DOSE_CONSTANTS = { 'Se-75': 55000, 'Ir-192': 130000 };
 const COLORS = ['#e2444f', '#287dc0', '#2d9960', '#ef922f', '#7544a8', '#00838f', '#c45100', '#596b23', '#b23a7a', '#536d8f'];
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
@@ -67,6 +68,20 @@ function uid(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function loadAuthorProfile() {
+  try {
+    const profile = JSON.parse(localStorage.getItem(AUTHOR_PROFILE_KEY));
+    if (profile && typeof profile === 'object') return { name: profile.name || '', role: profile.role || '', signature: profile.signature || null };
+  } catch (error) {
+    console.warn('Profil du réalisateur illisible', error);
+  }
+  return null;
+}
+
+function saveAuthorProfile() {
+  try { localStorage.setItem(AUTHOR_PROFILE_KEY, JSON.stringify(state.author)); } catch (error) { console.warn('Profil du réalisateur non enregistré', error); }
+}
+
 function defaultIntervention(index) {
   const examples = [
     { company: 'Société 1', isotope: 'Ir-192', activity: 40, unit: 'Ci' },
@@ -96,7 +111,7 @@ function freshState(name = 'Plan de balisage — U662') {
     theme: 'system',
     logo: null,
     client: '',
-    author: { name: '', role: '', signature: null },
+    author: loadAuthorProfile() || { name: '', role: '', signature: null },
     validatorEnabled: false,
     validator: { name: '', role: '', signature: null },
     calibration: { sourceUnit: 'm', metersPerNativeUnit: 1, method: 'file' },
@@ -310,6 +325,7 @@ async function refreshServerLibrary() {
 }
 
 async function restoreProject(project) {
+  clearTimeout(serverSaveTimer);
   const restored = project?.state || project;
   if (!restored || !Array.isArray(restored.interventions)) throw new Error('Projet enregistré incomplet.');
   if (restored.planFile?.id) {
@@ -321,6 +337,7 @@ async function restoreProject(project) {
     }
     if (currentPlan) restored.planFile = { ...restored.planFile, ...currentPlan };
   }
+  restored.author = loadAuthorProfile() || restored.author || { name: '', role: '', signature: null };
   state = restored;
   clearTimeout(pdfRenderTimer);
   clearPdfRenderer();
@@ -375,8 +392,9 @@ function openEditor() {
   setTool('select');
 }
 
-function openHome() {
+async function openHome() {
   saveState();
+  clearTimeout(serverSaveTimer);
   scaleSetup = { active: false, points: [], nativeDistance: 0 };
   document.querySelector('.canvas-area').classList.remove('scale-setting');
   renderScaleGuide();
@@ -384,10 +402,22 @@ function openHome() {
   homeView.hidden = false;
   setImportProgress('hidden');
   setImportStatus();
+  renderLogoSettings();
+  if (serverAvailable()) {
+    const snapshot = JSON.parse(JSON.stringify(state));
+    try {
+      await apiRequest(`projects/${encodeURIComponent(snapshot.projectId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(snapshot),
+      });
+    } catch (error) {
+      console.warn('Sauvegarde immédiate du projet indisponible', error);
+    }
+  }
   renderRecentProjects();
   renderArchives();
-  renderLogoSettings();
-  refreshServerLibrary();
+  await refreshServerLibrary();
 }
 
 function applyTheme(theme) {
@@ -1398,6 +1428,7 @@ async function processSignatureFile(kind, file) {
     ? { name: file.name, type: 'application/pdf', dataUrl: await readPdfAsImage(file) }
     : { name: file.name, type: file.type || 'image/png', dataUrl: await readImageLogo(file) };
   state[kind].signature = signature;
+  if (kind === 'author') saveAuthorProfile();
   renderLogoSettings(); renderTitleBlock(); saveState();
 }
 
@@ -1490,8 +1521,8 @@ document.querySelector('#settings-opacity').addEventListener('change', (event) =
 document.querySelector('#settings-title-block').addEventListener('change', (event) => { state.showTitleBlock = event.target.checked; renderTitleBlock(); saveState(); });
 document.querySelector('#settings-recenter').addEventListener('click', () => { state.panX = 0; state.panY = 0; updateMapTransform(); renderTitleBlock(); saveState(); });
 document.querySelector('#settings-recalibrate').addEventListener('click', () => beginScaleSetup(state.baseName, true));
-document.querySelector('#author-name').addEventListener('change', (event) => { state.author.name = event.target.value; renderTitleBlock(); saveState(); });
-document.querySelector('#author-role').addEventListener('change', (event) => { state.author.role = event.target.value; renderTitleBlock(); saveState(); });
+document.querySelector('#author-name').addEventListener('change', (event) => { state.author.name = event.target.value; saveAuthorProfile(); renderTitleBlock(); saveState(); });
+document.querySelector('#author-role').addEventListener('change', (event) => { state.author.role = event.target.value; saveAuthorProfile(); renderTitleBlock(); saveState(); });
 document.querySelector('#validator-enabled').addEventListener('change', (event) => { state.validatorEnabled = event.target.checked; document.querySelector('#validator-settings').hidden = !state.validatorEnabled; renderTitleBlock(); saveState(); });
 document.querySelector('#validator-name').addEventListener('change', (event) => { state.validator.name = event.target.value; renderTitleBlock(); saveState(); });
 document.querySelector('#validator-role').addEventListener('change', (event) => { state.validator.role = event.target.value; renderTitleBlock(); saveState(); });
@@ -1503,7 +1534,12 @@ document.querySelector('#validator-role').addEventListener('change', (event) => 
   ['dragleave', 'drop'].forEach((name) => drop.addEventListener(name, (event) => { event.preventDefault(); drop.classList.remove('dragging'); }));
   drop.addEventListener('drop', (event) => processSignatureFile(kind, event.dataTransfer.files[0]));
 });
-document.querySelectorAll('[data-remove-signature]').forEach((button) => button.addEventListener('click', () => { state[button.dataset.removeSignature].signature = null; renderLogoSettings(); renderTitleBlock(); saveState(); }));
+document.querySelectorAll('[data-remove-signature]').forEach((button) => button.addEventListener('click', () => {
+  const kind = button.dataset.removeSignature;
+  state[kind].signature = null;
+  if (kind === 'author') saveAuthorProfile();
+  renderLogoSettings(); renderTitleBlock(); saveState();
+}));
 sheet.addEventListener('click', handleSheetClick);
 sheet.addEventListener('click', handleScaleClick, true);
 sheet.addEventListener('wheel', (event) => {
@@ -1887,6 +1923,9 @@ document.querySelector('#archive-search').addEventListener('input', () => render
 const initialSavedState = loadSavedState();
 if (initialSavedState) state = initialSavedState;
 state.author ||= { name: '', role: '', signature: null };
+const savedAuthorProfile = loadAuthorProfile();
+if (savedAuthorProfile) state.author = savedAuthorProfile;
+else if (state.author.name || state.author.role || state.author.signature) saveAuthorProfile();
 state.validator ||= { name: '', role: '', signature: null };
 applyTheme(state.theme);
 renderLogoSettings();

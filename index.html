@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>ARCenal DRAW — POC fonctionnel</title>
-    <link rel="stylesheet" href="styles.css?v=0.9.4" />
+    <link rel="stylesheet" href="styles.css?v=0.9.5" />
     <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
   </head>
   <body>
@@ -20,25 +20,10 @@
           <h1>Ouvrir, calibrer, annoter, exporter.</h1>
           <p>Réutilisez une base existante ou déposez un plan PDF, PNG ou JPEG. Le fichier original reste intact.</p>
         </div>
-        <aside class="pdf-export-guide" aria-labelledby="pdf-export-guide-title">
-          <div>
-            <p class="eyebrow">MODE D’EMPLOI AUTOCAD</p>
-            <h2 id="pdf-export-guide-title">Obtenir un plan fin et lisible</h2>
-            <p class="quick-setting"><strong>Réglage rapide :</strong> choisissez <strong>DWG To PDF.pc3</strong>, décochez <strong>Tracer avec les épaisseurs d’objet</strong>, puis saisissez <strong>PDFSHX = 0</strong>.</p>
-          </div>
-          <ol>
-            <li>Désactivez « Tracer avec les épaisseurs d’objet ».</li>
-            <li>Sinon, utilisez une table CTB avec des traits de 0,05 à 0,10 mm.</li>
-            <li>Saisissez PDFSHX, puis 0, pour éviter les commentaires SHX.</li>
-            <li>Conservez la sortie vectorielle avec DWG To PDF.pc3.</li>
-            <li>Préférez les polices TrueType.</li>
-            <li>Ne transformez pas le plan en image.</li>
-          </ol>
-        </aside>
         <label class="drop-zone" id="drop-zone">
           <input id="plan-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden />
           <span class="drop-icon">＋</span>
-          <strong>Déposer un plan PDF, PNG ou JPEG</strong>
+          <strong>Déposer un plan PDF (désactiver « Tracer avec les épaisseurs d’objet »), PNG ou JPEG</strong>
           <span>ou cliquer pour choisir un fichier</span>
           <small>Le plan sera calibré en mètres à la première ouverture.</small>
           <div id="import-progress-wrap" class="import-progress" hidden>
@@ -47,12 +32,6 @@
           </div>
           <output id="import-status" class="import-status" role="status" aria-live="polite"></output>
         </label>
-        <section class="home-author-card" aria-labelledby="home-author-title">
-          <div><p class="eyebrow">CARTOUCHE</p><h2 id="home-author-title">Réalisation du plan</h2><p>Ces informations et la signature seront ajoutées automatiquement au cartouche.</p></div>
-          <div class="home-author-fields"><label>Nom et prénom<input id="author-name" type="text" placeholder="Nom Prénom" /></label><label>Fonction<input id="author-role" type="text" placeholder="Fonction" /></label></div>
-          <label class="signature-drop" id="author-signature-drop"><input id="author-signature-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer la signature</strong><small>PDF, PNG ou JPEG</small></label>
-          <div class="signature-file" id="author-signature-preview" hidden><span>✓</span><strong></strong><button type="button" data-remove-signature="author">Retirer</button></div>
-        </section>
         <section class="library-section">
           <div class="section-heading"><div><p class="eyebrow">PROJETS</p><h2>Reprendre le travail</h2></div><span>Les 5 plus récents</span></div>
           <div class="card-grid" id="recent-projects"></div>
@@ -64,6 +43,12 @@
         <section class="library-section">
           <div class="section-heading"><div><p class="eyebrow">BASES DE PLANS</p><h2>Plans déjà exploitables</h2></div></div>
           <div class="card-grid" id="exploitable-plans"><article class="plan-card"><div class="plan-thumb"><span>—</span></div><div class="plan-card-body"><strong>Aucun plan importé</strong><span>Vos plans convertis apparaîtront ici.</span></div></article></div>
+        </section>
+        <section class="home-author-card" aria-labelledby="home-author-title">
+          <div><p class="eyebrow">CARTOUCHE</p><h2 id="home-author-title">Réalisation du plan</h2><p>Ces informations restent en mémoire et s’appliquent à tous les projets jusqu’à leur modification.</p></div>
+          <div class="home-author-fields"><label>Nom et prénom<input id="author-name" type="text" placeholder="Nom Prénom" /></label><label>Fonction<input id="author-role" type="text" placeholder="Fonction" /></label></div>
+          <label class="signature-drop" id="author-signature-drop"><input id="author-signature-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer la signature</strong><small>PDF, PNG ou JPEG</small></label>
+          <div class="signature-file" id="author-signature-preview" hidden><span>✓</span><strong></strong><button type="button" data-remove-signature="author">Retirer</button></div>
         </section>
       </main>
     </section>
@@ -181,6 +166,6 @@
         <div class="dialog-actions"><button type="button" class="primary" id="start-calibration">Calibrer</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=0.9.4"></script>
+    <script src="app.js?v=0.9.5"></script>
   </body>
 </html>
