@@ -117,6 +117,7 @@ function freshState(name = 'Plan de balisage — U662') {
     interventions: [defaultIntervention(0)],
     circles: [],
     merges: [],
+    overzoneMerges: [],
     signals: [],
     measurements: [],
     suppressedOverzones: [],
@@ -350,6 +351,7 @@ async function restoreProject(project) {
 function openEditor() {
   state.circles ||= [];
   state.merges ||= [];
+  state.overzoneMerges ||= [];
   state.signals ||= [];
   state.measurements ||= [];
   state.projectId ||= uid('project');
@@ -815,9 +817,16 @@ function overzoneKey(interventionId, cx, cy) {
 
 function renderOverzones() {
   overzoneLayer.innerHTML = '';
-  const circlesInMerge = new Set(state.merges.flatMap((merge) => merge.circleIds));
+  const circlesInStandardMerge = new Set(state.merges.flatMap((merge) => merge.circleIds));
+  const circlesInOverzoneMerge = new Set();
   const groups = state.merges.map((merge) => ({ key: `merge:${merge.id}`, circles: merge.circleIds.map(circleById).filter(Boolean) }));
-  state.circles.filter((circle) => !circlesInMerge.has(circle.id)).forEach((circle) => {
+  state.overzoneMerges.forEach((merge) => {
+    const circles = merge.circleIds.map(circleById).filter((circle) => circle && !circlesInStandardMerge.has(circle.id));
+    if (circles.length < 2) return;
+    circles.forEach((circle) => circlesInOverzoneMerge.add(circle.id));
+    groups.push({ key: `overmerge:${merge.id}`, circles });
+  });
+  state.circles.filter((circle) => !circlesInStandardMerge.has(circle.id) && !circlesInOverzoneMerge.has(circle.id)).forEach((circle) => {
     groups.push({ key: overzoneKey(circle.interventionId, circle.cx, circle.cy), circles: [circle] });
   });
   const rendered = new Set();
@@ -1044,7 +1053,8 @@ function updateSelectionPanel(message = '') {
   const splitButton = document.querySelector('#split-button');
   mergeButton.disabled = count < 2 || interventions.size !== 1;
   mergeButton.hidden = mergeButton.disabled;
-  splitButton.disabled = mergeCount === 0;
+  const selectedOverzoneMergeIds = [...selectedOverzoneKeys].filter((key) => key.startsWith('overmerge:'));
+  splitButton.disabled = mergeCount === 0 && selectedOverzoneMergeIds.length === 0;
   splitButton.hidden = splitButton.disabled;
   document.querySelector('#delete-selection').disabled = count + mergeCount + signalCount + overzoneCount + measurementCount === 0;
   const assignmentRow = document.querySelector('#reassign-zone-row');
@@ -1059,8 +1069,8 @@ function updateSelectionPanel(message = '') {
   }
 }
 
-function circlesConnected(circles) {
-  circles = circles.map(circleGeometry);
+function geometriesConnected(circles) {
+  if (circles.length < 2) return false;
   const reached = new Set([circles[0].id]);
   let changed = true;
   while (changed) {
@@ -1072,6 +1082,23 @@ function circlesConnected(circles) {
     }));
   }
   return reached.size === circles.length;
+}
+
+function circlesConnected(circles) {
+  return geometriesConnected(circles.map(circleGeometry));
+}
+
+function overzonesConnected(circles, intervention) {
+  if (!intervention?.overEnabled) return false;
+  const radius = metersToPlanUnits(Math.max(0.1, Number(intervention.overDistance) || 0.1));
+  return geometriesConnected(circles.map((circle) => ({ id: circle.id, cx: circle.cx, cy: circle.cy, radius })));
+}
+
+function removeCirclesFromOverzoneMerges(circleIds) {
+  const removed = circleIds instanceof Set ? circleIds : new Set(circleIds);
+  state.overzoneMerges = state.overzoneMerges
+    .map((merge) => ({ ...merge, circleIds: merge.circleIds.filter((id) => !removed.has(id)) }))
+    .filter((merge) => merge.circleIds.length > 1);
 }
 
 function pointOn(circle, angle) {
@@ -1635,8 +1662,10 @@ document.querySelector('#signal-picker').addEventListener('click', (event) => {
 });
 function deleteSelection() {
   const mergedCircleIds = new Set(state.merges.filter((merge) => selectedMergeIds.has(merge.id)).flatMap((merge) => merge.circleIds));
+  const deletedCircleIds = new Set([...selectedCircleIds, ...mergedCircleIds]);
   state.circles = state.circles.filter((circle) => !selectedCircleIds.has(circle.id) && !mergedCircleIds.has(circle.id));
   state.merges = state.merges.filter((merge) => !selectedMergeIds.has(merge.id) && !merge.circleIds.some((id) => selectedCircleIds.has(id)));
+  removeCirclesFromOverzoneMerges(deletedCircleIds);
   state.signals = state.signals.filter((signal) => !selectedSignalIds.has(signal.id));
   state.measurements = (state.measurements || []).filter((measurement) => !selectedMeasurementIds.has(measurement.id));
   selectedOverzoneKeys.forEach((key) => {
@@ -1681,18 +1710,33 @@ document.querySelector('#reassign-intervention').addEventListener('change', (eve
     circle.color = intervention.color;
     if (circle.threshold !== 'manual') circle.radius = radiusMeters(intervention, circle.threshold, circle.attenuated);
   });
+  removeCirclesFromOverzoneMerges(selectedIds);
   renderZones(); renderTitleBlock(); saveState();
 });
 document.querySelector('#merge-button').addEventListener('click', () => {
   const circles = [...selectedCircleIds].map(circleById).filter(Boolean);
-  if (!circlesConnected(circles)) { updateSelectionPanel('Les zones doivent se toucher pour être fusionnées.'); return; }
   const intervention = state.interventions.find((item) => item.id === circles[0].interventionId);
-  state.merges.push({ id: uid('merge'), circleIds: circles.map((circle) => circle.id), interventionId: intervention.id, color: intervention.color });
+  const circleIds = new Set(circles.map((circle) => circle.id));
+  if (circlesConnected(circles)) {
+    removeCirclesFromOverzoneMerges(circleIds);
+    state.merges.push({ id: uid('merge'), circleIds: [...circleIds], interventionId: intervention.id, color: intervention.color });
+  } else if (overzonesConnected(circles, intervention)) {
+    state.overzoneMerges.forEach((merge) => {
+      if (merge.circleIds.some((id) => circleIds.has(id))) merge.circleIds.forEach((id) => circleIds.add(id));
+    });
+    state.overzoneMerges = state.overzoneMerges.filter((merge) => !merge.circleIds.some((id) => circleIds.has(id)));
+    state.overzoneMerges.push({ id: uid('overmerge'), circleIds: [...circleIds], interventionId: intervention.id });
+  } else {
+    updateSelectionPanel('Les balisages ou les surbalisages sélectionnés doivent se toucher pour être fusionnés.');
+    return;
+  }
   selectedCircleIds.clear(); renderZones(); saveState();
 });
 document.querySelector('#split-button').addEventListener('click', () => {
   state.merges = state.merges.filter((merge) => !selectedMergeIds.has(merge.id));
-  selectedMergeIds.clear(); renderZones(); saveState();
+  const overzoneMergeIds = new Set([...selectedOverzoneKeys].filter((key) => key.startsWith('overmerge:')).map((key) => key.slice('overmerge:'.length)));
+  state.overzoneMerges = state.overzoneMerges.filter((merge) => !overzoneMergeIds.has(merge.id));
+  selectedMergeIds.clear(); selectedOverzoneKeys.clear(); renderZones(); saveState();
 });
 function setInterventionCount(requestedCount) {
   const count = Math.max(1, Math.min(10, Math.round(Number(requestedCount) || 1)));
@@ -1716,6 +1760,7 @@ function deleteIntervention(interventionId) {
   if (!window.confirm(`Supprimer l’équipe « ${intervention.company} » et ses ${impactCount} point(s) d’impact ?`)) return;
   state.circles = state.circles.filter((circle) => !impactedCircleIds.has(circle.id));
   state.merges = state.merges.filter((merge) => merge.interventionId !== interventionId && !merge.circleIds.some((id) => impactedCircleIds.has(id)));
+  state.overzoneMerges = state.overzoneMerges.filter((merge) => merge.interventionId !== interventionId && !merge.circleIds.some((id) => impactedCircleIds.has(id)));
   state.suppressedOverzones = state.suppressedOverzones.filter((key) => !key.startsWith(`${interventionId}:`));
   state.interventions = state.interventions.filter((item) => item.id !== interventionId);
   state.interventions.forEach((item, index) => { item.code = LETTERS[index]; });

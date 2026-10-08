@@ -193,6 +193,14 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("event.altKey", javascript)
         self.assertIn(".impact-selection-box", stylesheet)
 
+    def test_merge_uses_touching_overzones_when_standard_zones_are_separate(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("overzoneMerges: []", javascript)
+        self.assertIn("function overzonesConnected(circles, intervention)", javascript)
+        self.assertIn("} else if (overzonesConnected(circles, intervention)) {", javascript)
+        self.assertIn("state.overzoneMerges.push", javascript)
+        self.assertIn("key.startsWith('overmerge:')", javascript)
+
     def test_pdf_export_prints_the_visible_sheet_without_substitution(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
