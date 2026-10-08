@@ -193,15 +193,16 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("event.altKey", javascript)
         self.assertIn(".impact-selection-box", stylesheet)
 
-    def test_pdf_export_uses_a_vector_layer_separate_from_the_screen_preview(self):
+    def test_pdf_export_is_a_flattened_universal_600_dpi_download(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
-        stylesheet = (ROOT / "styles.css").read_text(encoding="utf-8")
-        self.assertIn('id="print-vector-layer"', markup)
-        self.assertIn("async function prepareVectorExport()", javascript)
-        self.assertIn("}/vector`), { credentials: 'same-origin' }", javascript)
-        self.assertIn("vector-print-ready", stylesheet)
-        self.assertNotIn("Continuer avec l’aperçu actuel", javascript)
+        self.assertIn("const UNIVERSAL_PDF_DPI = 600", javascript)
+        self.assertIn("async function exportUniversalPdf(exportName)", javascript)
+        self.assertIn("canvas.toBlob(resolve, 'image/jpeg', 0.96)", javascript)
+        self.assertIn("/Filter /DCTDecode", javascript)
+        self.assertIn("link.download = `${exportName}.pdf`", javascript)
+        self.assertNotIn("window.print()", javascript)
+        self.assertNotIn('id="print-vector-layer"', markup)
 
 
 if __name__ == "__main__":

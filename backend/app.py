@@ -7,7 +7,7 @@ from http import HTTPStatus
 from urllib.parse import unquote
 
 from backend import db
-from backend.importer import ImportErrorSafe, convert_upload, delete_import, original_file, preview_file, store_upload, vector_file
+from backend.importer import ImportErrorSafe, convert_upload, delete_import, original_file, preview_file, store_upload
 
 
 MAX_JSON_BYTES = 12 * 1024 * 1024
@@ -184,14 +184,6 @@ def route(environ, start_response):
         except FileNotFoundError:
             return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Original introuvable."})
         return file_response(environ, start_response, original, media_type)
-
-    vector_match = re.fullmatch(r"/api/imports/([a-fA-F0-9]{32})/vector", path)
-    if vector_match and method == "GET":
-        try:
-            vector = vector_file(vector_match.group(1))
-        except FileNotFoundError:
-            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Version vectorielle indisponible."})
-        return file_response(environ, start_response, vector, "image/svg+xml")
 
     return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Route introuvable."})
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>ARCenal DRAW — POC fonctionnel</title>
-    <link rel="stylesheet" href="styles.css?v=0.9.5" />
+    <link rel="stylesheet" href="styles.css?v=0.9.6" />
     <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
   </head>
   <body>
@@ -62,7 +62,7 @@
           <div class="zoom-field"><span>Zoom du plan</span><div class="zoom-control"><button id="zoom-out" type="button" aria-label="Réduire le zoom">−</button><input id="plan-zoom" type="range" min="1" max="50" step="0.5" value="1" /><button id="zoom-in" type="button" aria-label="Augmenter le zoom">+</button></div><output id="plan-zoom-value">1×</output></div>
           <button class="secondary" id="recalibrate-button">Calibrer</button>
           <button class="secondary" id="settings-button">⚙ Paramètres</button>
-          <button class="primary" id="export-button">Exporter PDF</button>
+          <button class="primary" id="export-button">Exporter PDF 600 DPI</button>
         </div>
       </header>
       <main class="workspace">
@@ -87,7 +87,6 @@
               <rect id="sheet-background" width="420" height="297" fill="#fff"/>
               <rect id="sheet-margin" x="10" y="10" width="400" height="277" fill="none" stroke="#cbd2d7" stroke-width=".35"/>
               <g id="map-layer">
-                <g id="print-vector-layer"></g>
                 <image id="plan-preview" x="0" y="0" width="420" height="297" preserveAspectRatio="xMidYMid meet" hidden />
                 <g id="overzone-layer"></g><g id="zone-layer"></g><g id="impact-layer"></g><g id="signal-layer"></g><g id="measurement-layer"></g><g id="scale-layer"></g>
               </g>
@@ -166,6 +165,6 @@
         <div class="dialog-actions"><button type="button" class="primary" id="start-calibration">Calibrer</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=0.9.5"></script>
+    <script src="app.js?v=0.9.6"></script>
   </body>
 </html>

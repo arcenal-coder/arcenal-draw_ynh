@@ -2,6 +2,7 @@ const NS = 'http://www.w3.org/2000/svg';
 const STORAGE_KEY = 'arcenal-draw-poc-v2';
 const ARCHIVE_KEY = 'arcenal-draw-export-archives-v1';
 const AUTHOR_PROFILE_KEY = 'arcenal-draw-author-profile-v1';
+const UNIVERSAL_PDF_DPI = 600;
 const DOSE_CONSTANTS = { 'Se-75': 55000, 'Ir-192': 130000 };
 const COLORS = ['#e2444f', '#287dc0', '#2d9960', '#ef922f', '#7544a8', '#00838f', '#c45100', '#596b23', '#b23a7a', '#536d8f'];
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
@@ -15,7 +16,6 @@ const pdfSurface = document.querySelector('#pdf-surface');
 const sheetBackground = document.querySelector('#sheet-background');
 const sheetMargin = document.querySelector('#sheet-margin');
 const mapLayer = document.querySelector('#map-layer');
-const printVectorLayer = document.querySelector('#print-vector-layer');
 const planPreview = document.querySelector('#plan-preview');
 const overzoneLayer = document.querySelector('#overzone-layer');
 const zoneLayer = document.querySelector('#zone-layer');
@@ -1775,47 +1775,158 @@ function archiveCurrentExport(exportName) {
   }
 }
 
-async function prepareVectorExport() {
-  printVectorLayer.replaceChildren();
-  sheetFrame.classList.remove('vector-print-ready');
-  if (state.planFile?.extension !== '.pdf' || !state.planFile?.id) return;
-  try {
-    document.querySelector('#save-status').textContent = 'Préparation du PDF vectoriel…';
-    const response = await fetch(apiUrl(`imports/${encodeURIComponent(state.planFile.id)}/vector`), { credentials: 'same-origin' });
-    if (!response.ok) throw new Error('Version vectorielle indisponible');
-    const documentSvg = new DOMParser().parseFromString(await response.text(), 'image/svg+xml');
-    const root = documentSvg.documentElement;
-    if (root.nodeName.toLowerCase() !== 'svg' || documentSvg.querySelector('parsererror')) throw new Error('SVG invalide');
-    root.querySelectorAll('script,foreignObject').forEach((element) => element.remove());
-    root.querySelectorAll('*').forEach((element) => [...element.attributes].forEach((attribute) => {
-      if (attribute.name.toLowerCase().startsWith('on')) element.removeAttribute(attribute.name);
-    }));
-    root.setAttribute('x', '0');
-    root.setAttribute('y', '0');
-    root.setAttribute('width', state.orientation === 'portrait' ? '297' : '420');
-    root.setAttribute('height', state.orientation === 'portrait' ? '420' : '297');
-    root.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    printVectorLayer.replaceChildren(document.importNode(root, true));
-    sheetFrame.classList.add('vector-print-ready');
-    document.querySelector('#save-status').textContent = 'Plan complet prêt pour l’export PDF';
-  } catch (error) {
-    document.querySelector('#save-status').textContent = 'Plan complet prêt — qualité du fichier source conservée';
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function inlineSvgImages(root) {
+  await Promise.all([...root.querySelectorAll('image')].map(async (image) => {
+    const href = image.getAttribute('href') || image.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+    if (!href || href.startsWith('data:')) return;
+    const response = await fetch(new URL(href, document.baseURI), { credentials: 'same-origin' });
+    if (!response.ok) throw new Error(`Ressource graphique indisponible (${response.status})`);
+    image.setAttribute('href', await blobToDataUrl(await response.blob()));
+  }));
+}
+
+function drawSvgOnCanvas(canvas, svgRoot) {
+  return new Promise((resolve, reject) => {
+    const markup = new XMLSerializer().serializeToString(svgRoot);
+    const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
+    const image = new Image();
+    image.onload = () => {
+      try {
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve();
+      } catch (error) {
+        reject(error);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Composition graphique impossible.')); };
+    image.src = url;
+  });
+}
+
+async function drawOriginalPdfOnCanvas(canvas) {
+  const sourcePath = state.planFile?.originalUrl || (state.planFile?.id ? `imports/${state.planFile.id}/original` : '');
+  if (!sourcePath) throw new Error('PDF original introuvable.');
+  const sourceKey = apiUrl(sourcePath);
+  const page = await ensurePdfPage(sourceKey);
+  const portrait = state.orientation === 'portrait';
+  const logicalWidth = portrait ? 297 : 420;
+  const logicalHeight = portrait ? 420 : 297;
+  const pixelsPerUnit = canvas.width / logicalWidth;
+  const baseViewport = page.getViewport({ scale: 1 });
+  const fit = Math.min(logicalWidth / baseViewport.width, logicalHeight / baseViewport.height);
+  const baseWidth = baseViewport.width * fit;
+  const baseHeight = baseViewport.height * fit;
+  const baseX = (logicalWidth - baseWidth) / 2;
+  const baseY = (logicalHeight - baseHeight) / 2;
+  const zoom = mapScale();
+  const logicalX = 150 + state.panX + zoom * (baseX - 150);
+  const logicalY = 135 + state.panY + zoom * (baseY - 135);
+  const viewport = page.getViewport({ scale: fit * zoom * pixelsPerUnit });
+  await page.render({
+    canvasContext: canvas.getContext('2d'),
+    viewport,
+    transform: [1, 0, 0, 1, logicalX * pixelsPerUnit, logicalY * pixelsPerUnit],
+  }).promise;
+}
+
+function concatenateBytes(parts) {
+  const size = parts.reduce((total, part) => total + part.length, 0);
+  const output = new Uint8Array(size);
+  let offset = 0;
+  parts.forEach((part) => { output.set(part, offset); offset += part.length; });
+  return output;
+}
+
+function universalPdfBytes(jpegBytes, pixelWidth, pixelHeight, pageWidth, pageHeight) {
+  const encode = (value) => new TextEncoder().encode(value);
+  const content = encode(`q\n${pageWidth.toFixed(3)} 0 0 ${pageHeight.toFixed(3)} 0 0 cm\n/Im0 Do\nQ\n`);
+  const objects = [
+    encode('<< /Type /Catalog /Pages 2 0 R >>'),
+    encode('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'),
+    encode(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(3)} ${pageHeight.toFixed(3)}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`),
+    concatenateBytes([encode(`<< /Type /XObject /Subtype /Image /Width ${pixelWidth} /Height ${pixelHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`), jpegBytes, encode('\nendstream')]),
+    concatenateBytes([encode(`<< /Length ${content.length} >>\nstream\n`), content, encode('endstream')]),
+  ];
+  const parts = [encode('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n')];
+  const offsets = [0];
+  let length = parts[0].length;
+  objects.forEach((object, index) => {
+    offsets.push(length);
+    const wrapped = concatenateBytes([encode(`${index + 1} 0 obj\n`), object, encode('\nendobj\n')]);
+    parts.push(wrapped);
+    length += wrapped.length;
+  });
+  const xrefOffset = length;
+  const xref = [`xref\n0 ${objects.length + 1}\n`, '0000000000 65535 f \n', ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)].join('');
+  parts.push(encode(`${xref}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`));
+  return concatenateBytes(parts);
+}
+
+async function exportUniversalPdf(exportName) {
+  const portrait = state.orientation === 'portrait';
+  const widthMm = portrait ? 297 : 420;
+  const heightMm = portrait ? 420 : 297;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round((widthMm / 25.4) * UNIVERSAL_PDF_DPI);
+  canvas.height = Math.round((heightMm / 25.4) * UNIVERSAL_PDF_DPI);
+  const context = canvas.getContext('2d', { alpha: false });
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  const overlay = sheet.cloneNode(true);
+  overlay.setAttribute('xmlns', NS);
+  overlay.setAttribute('width', widthMm);
+  overlay.setAttribute('height', heightMm);
+  overlay.querySelector('#selection-box-layer')?.remove();
+  if (state.planFile?.extension === '.pdf') {
+    document.querySelector('#save-status').textContent = 'Rendu du plan à 600 DPI…';
+    await drawOriginalPdfOnCanvas(canvas);
+    overlay.querySelector('#sheet-background')?.remove();
+    overlay.querySelector('#plan-preview')?.remove();
   }
+  await inlineSvgImages(overlay);
+  document.querySelector('#save-status').textContent = 'Composition du cartouche et des annotations…';
+  await drawSvgOnCanvas(canvas, overlay);
+  const jpegBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.96));
+  if (!jpegBlob) throw new Error('Création de l’image 600 DPI impossible.');
+  const pageWidth = (widthMm / 25.4) * 72;
+  const pageHeight = (heightMm / 25.4) * 72;
+  const pdf = universalPdfBytes(new Uint8Array(await jpegBlob.arrayBuffer()), canvas.width, canvas.height, pageWidth, pageHeight);
+  const url = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${exportName}.pdf`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 document.querySelector('#export-button').addEventListener('click', async () => {
   saveState();
-  await prepareVectorExport();
   const exportName = exportFileName();
-  archiveCurrentExport(exportName);
-  const previousTitle = document.title;
-  document.title = exportName;
-  window.addEventListener('afterprint', () => {
-    document.title = previousTitle;
-    sheetFrame.classList.remove('vector-print-ready');
-    printVectorLayer.replaceChildren();
-  }, { once: true });
-  window.print();
+  const button = document.querySelector('#export-button');
+  button.disabled = true;
+  try {
+    document.querySelector('#save-status').textContent = 'Préparation du PDF universel 600 DPI…';
+    await exportUniversalPdf(exportName);
+    archiveCurrentExport(exportName);
+    document.querySelector('#save-status').textContent = 'PDF universel 600 DPI téléchargé';
+  } catch (error) {
+    console.error('Export PDF impossible', error);
+    document.querySelector('#save-status').textContent = `Export PDF impossible : ${error.message}`;
+  } finally {
+    button.disabled = false;
+    renderPlanPreview();
+  }
 });
 document.querySelector('#recalibrate-button').addEventListener('click', () => beginScaleSetup(state.baseName, true));
 document.querySelector('#start-calibration').addEventListener('click', () => beginScaleSetup(state.baseName));

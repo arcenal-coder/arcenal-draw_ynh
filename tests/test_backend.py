@@ -179,21 +179,6 @@ class BackendTest(unittest.TestCase):
             with mock.patch("backend.importer.shutil.which", return_value="pdftocairo"), mock.patch("backend.importer.subprocess.run", side_effect=write_vector_svg):
                 self.assertTrue(importer._convert_pdf_to_svg(source, output))
 
-    def test_vector_export_endpoint_returns_svg_for_a_pdf_plan(self):
-        def write_vector_svg(_source, output, **_kwargs):
-            Path(output).write_text("<svg width='842' height='595'><path d='M0 0L10 10'/></svg>", encoding="utf-8")
-            return True
-
-        with mock.patch("backend.importer._convert_pdf_to_svg", side_effect=write_vector_svg):
-            status, plan = self.call(
-                "POST", "/api/imports", raw=b"%PDF-1.7\n" + b"0" * 64,
-                headers={"HTTP_X_FILENAME": "vectoriel.pdf"},
-            )
-        self.assertEqual(status, 201)
-        status, vector = self.call("GET", f"/api/imports/{plan['id']}/vector")
-        self.assertEqual(status, 200)
-        self.assertIn(b"<svg", vector)
-
     def test_empty_svg_falls_back_to_the_original_pdf(self):
         from backend import importer
 

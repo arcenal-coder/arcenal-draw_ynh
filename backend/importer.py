@@ -163,22 +163,6 @@ def original_file(upload_id):
     raise FileNotFoundError
 
 
-def vector_file(upload_id):
-    if not upload_id.isalnum() or len(upload_id) != 32:
-        raise ImportErrorSafe("Identifiant d’import invalide.")
-    directory = UPLOAD_DIR / upload_id
-    preview = directory / "preview.svg"
-    if preview.is_file():
-        return preview
-    source = directory / "original.pdf"
-    output = directory / "print.svg"
-    if output.is_file():
-        return output
-    if not source.is_file() or not _convert_pdf_to_svg(source, output, timeout=180, max_output_bytes=100 * 1024 * 1024):
-        raise FileNotFoundError
-    return output
-
-
 def delete_import(upload_id):
     if not upload_id.isalnum() or len(upload_id) != 32:
         raise ImportErrorSafe("Identifiant d’import invalide.")
