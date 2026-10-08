@@ -204,6 +204,14 @@ class FrontendTests(unittest.TestCase):
         self.assertNotIn("window.print()", javascript)
         self.assertNotIn('id="print-vector-layer"', markup)
 
+    def test_native_pdf_export_preserves_the_vector_background(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("async function exportVectorPdf()", javascript)
+        self.assertIn("fetch(apiUrl('exports/vector')", javascript)
+        self.assertIn("overlay.querySelector('#sheet-background')?.remove()", javascript)
+        self.assertIn("vectorSource ? await exportVectorPdf() : await exportUniversalPdf(exportName)", javascript)
+        self.assertNotIn("async function drawOriginalPdfOnCanvas", javascript)
+
     def test_pdf_archive_displays_the_saved_document(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")

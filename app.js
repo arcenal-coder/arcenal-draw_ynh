@@ -1815,32 +1815,6 @@ function drawSvgOnCanvas(canvas, svgRoot) {
   });
 }
 
-async function drawOriginalPdfOnCanvas(canvas) {
-  const sourcePath = state.planFile?.originalUrl || (state.planFile?.id ? `imports/${state.planFile.id}/original` : '');
-  if (!sourcePath) throw new Error('PDF original introuvable.');
-  const sourceKey = apiUrl(sourcePath);
-  const page = await ensurePdfPage(sourceKey);
-  const portrait = state.orientation === 'portrait';
-  const logicalWidth = portrait ? 297 : 420;
-  const logicalHeight = portrait ? 420 : 297;
-  const pixelsPerUnit = canvas.width / logicalWidth;
-  const baseViewport = page.getViewport({ scale: 1 });
-  const fit = Math.min(logicalWidth / baseViewport.width, logicalHeight / baseViewport.height);
-  const baseWidth = baseViewport.width * fit;
-  const baseHeight = baseViewport.height * fit;
-  const baseX = (logicalWidth - baseWidth) / 2;
-  const baseY = (logicalHeight - baseHeight) / 2;
-  const zoom = mapScale();
-  const logicalX = 150 + state.panX + zoom * (baseX - 150);
-  const logicalY = 135 + state.panY + zoom * (baseY - 135);
-  const viewport = page.getViewport({ scale: fit * zoom * pixelsPerUnit });
-  await page.render({
-    canvasContext: canvas.getContext('2d'),
-    viewport,
-    transform: [1, 0, 0, 1, logicalX * pixelsPerUnit, logicalY * pixelsPerUnit],
-  }).promise;
-}
-
 function concatenateBytes(parts) {
   const size = parts.reduce((total, part) => total + part.length, 0);
   const output = new Uint8Array(size);
@@ -1889,12 +1863,6 @@ async function exportUniversalPdf(exportName) {
   overlay.setAttribute('width', widthMm);
   overlay.setAttribute('height', heightMm);
   overlay.querySelector('#selection-box-layer')?.remove();
-  if (state.planFile?.extension === '.pdf') {
-    document.querySelector('#save-status').textContent = 'Rendu du plan à 600 DPI…';
-    await drawOriginalPdfOnCanvas(canvas);
-    overlay.querySelector('#sheet-background')?.remove();
-    overlay.querySelector('#plan-preview')?.remove();
-  }
   await inlineSvgImages(overlay);
   document.querySelector('#save-status').textContent = 'Composition du cartouche et des annotations…';
   await drawSvgOnCanvas(canvas, overlay);
@@ -1904,6 +1872,42 @@ async function exportUniversalPdf(exportName) {
   const pageHeight = (heightMm / 25.4) * 72;
   const pdf = universalPdfBytes(new Uint8Array(await jpegBlob.arrayBuffer()), canvas.width, canvas.height, pageWidth, pageHeight);
   return new Blob([pdf], { type: 'application/pdf' });
+}
+
+async function exportVectorPdf() {
+  if (!state.planFile?.id) throw new Error('PDF original introuvable.');
+  const portrait = state.orientation === 'portrait';
+  const widthMm = portrait ? 297 : 420;
+  const heightMm = portrait ? 420 : 297;
+  const overlay = sheet.cloneNode(true);
+  overlay.setAttribute('xmlns', NS);
+  overlay.setAttribute('width', `${widthMm}mm`);
+  overlay.setAttribute('height', `${heightMm}mm`);
+  overlay.setAttribute('viewBox', `0 0 ${widthMm} ${heightMm}`);
+  overlay.querySelector('#selection-box-layer')?.remove();
+  overlay.querySelector('#sheet-background')?.remove();
+  overlay.querySelector('#plan-preview')?.remove();
+  await inlineSvgImages(overlay);
+  const response = await fetch(apiUrl('exports/vector'), {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      planId: state.planFile.id,
+      overlaySvg: new XMLSerializer().serializeToString(overlay),
+      orientation: state.orientation,
+      zoom: mapScale(),
+      panX: state.panX,
+      panY: state.panY,
+    }),
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result.error || `Composition PDF impossible (${response.status})`);
+  }
+  const pdf = await response.blob();
+  if (pdf.type !== 'application/pdf' || pdf.size < 10) throw new Error('Le PDF vectoriel reçu est invalide.');
+  return pdf;
 }
 
 function downloadPdf(pdfBlob, exportName) {
@@ -1921,11 +1925,12 @@ document.querySelector('#export-button').addEventListener('click', async () => {
   const button = document.querySelector('#export-button');
   button.disabled = true;
   try {
-    document.querySelector('#save-status').textContent = 'Préparation du PDF universel 600 DPI…';
-    const pdfBlob = await exportUniversalPdf(exportName);
+    const vectorSource = state.planFile?.extension === '.pdf';
+    document.querySelector('#save-status').textContent = vectorSource ? 'Composition du PDF vectoriel…' : 'Préparation du PDF image 600 DPI…';
+    const pdfBlob = vectorSource ? await exportVectorPdf() : await exportUniversalPdf(exportName);
     downloadPdf(pdfBlob, exportName);
     await archiveCurrentExport(exportName, pdfBlob);
-    document.querySelector('#save-status').textContent = 'PDF universel 600 DPI téléchargé';
+    document.querySelector('#save-status').textContent = vectorSource ? 'PDF vectoriel téléchargé' : 'PDF image 600 DPI téléchargé';
   } catch (error) {
     console.error('Export PDF impossible', error);
     document.querySelector('#save-status').textContent = `Export PDF impossible : ${error.message}`;

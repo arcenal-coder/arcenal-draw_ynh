@@ -4,7 +4,7 @@ id = "arcenal_draw"
 name = "ARCenal DRAW"
 description.fr = "Création et archivage de plans de contrôle gammagraphique"
 description.en = "Create and archive gamma radiography control plans"
-version = "0.9.7~ynh1"
+version = "0.9.8~ynh1"
 maintainers = ["ARCenal"]
 
 [upstream]
@@ -51,4 +51,4 @@ ram.build = "500M"
         default = 8095
 
     [resources.apt]
-    packages = "python3, gunicorn, poppler-utils"
+    packages = "python3, python3-pypdf2, gunicorn, poppler-utils, librsvg2-bin"
