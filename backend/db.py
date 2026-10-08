@@ -51,6 +51,7 @@ def initialize():
                 owner TEXT NOT NULL,
                 export_name TEXT NOT NULL,
                 state_json TEXT NOT NULL,
+                pdf_path TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE SET NULL
             );
@@ -74,6 +75,9 @@ def initialize():
         columns = {row[1] for row in database.execute("PRAGMA table_info(plan_files)").fetchall()}
         if "calibration_json" not in columns:
             database.execute("ALTER TABLE plan_files ADD COLUMN calibration_json TEXT")
+        archive_columns = {row[1] for row in database.execute("PRAGMA table_info(archives)").fetchall()}
+        if "pdf_path" not in archive_columns:
+            database.execute("ALTER TABLE archives ADD COLUMN pdf_path TEXT")
 
 
 def list_projects(owner):
@@ -122,10 +126,15 @@ def save_project(owner, project_id, state):
 def list_archives(owner, limit=50):
     with connection() as database:
         rows = database.execute(
-            "SELECT id, project_id, export_name, created_at FROM archives WHERE owner = ? ORDER BY created_at DESC LIMIT ?",
+            "SELECT id, project_id, export_name, pdf_path, created_at FROM archives WHERE owner = ? ORDER BY created_at DESC LIMIT ?",
             (owner, limit),
         ).fetchall()
-    return [dict(row) for row in rows]
+    archives = []
+    for row in rows:
+        archive = dict(row)
+        archive["has_pdf"] = bool(archive.pop("pdf_path", None))
+        archives.append(archive)
+    return archives
 
 
 def save_plan_file(owner, plan):
@@ -200,7 +209,25 @@ def get_archive(owner, archive_id):
         return None
     result = dict(row)
     result["state"] = json.loads(result.pop("state_json"))
+    result["has_pdf"] = bool(result.pop("pdf_path", None))
     return result
+
+
+def get_archive_pdf_path(owner, archive_id):
+    with connection() as database:
+        row = database.execute(
+            "SELECT pdf_path FROM archives WHERE owner = ? AND id = ?", (owner, archive_id)
+        ).fetchone()
+    return row["pdf_path"] if row and row["pdf_path"] else None
+
+
+def set_archive_pdf_path(owner, archive_id, pdf_path):
+    with connection() as database:
+        cursor = database.execute(
+            "UPDATE archives SET pdf_path = ? WHERE owner = ? AND id = ?",
+            (pdf_path, owner, archive_id),
+        )
+    return cursor.rowcount > 0
 
 
 def delete_archive(owner, archive_id):

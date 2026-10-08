@@ -204,6 +204,16 @@ class FrontendTests(unittest.TestCase):
         self.assertNotIn("window.print()", javascript)
         self.assertNotIn('id="print-vector-layer"', markup)
 
+    def test_pdf_archive_displays_the_saved_document(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="export-button">Export PDF</button>', markup)
+        self.assertIn('data-view-archive=', javascript)
+        self.assertIn('>Afficher</button>', javascript)
+        self.assertIn('/pdf`), \'_blank\'', javascript)
+        self.assertIn("body: pdfBlob", javascript)
+        self.assertNotIn('data-open-archive=', javascript)
+
 
 if __name__ == "__main__":
     unittest.main()

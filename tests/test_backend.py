@@ -13,6 +13,7 @@ class BackendTest(unittest.TestCase):
         cls.temp_dir = tempfile.TemporaryDirectory()
         os.environ["ARCENAL_DB_PATH"] = os.path.join(cls.temp_dir.name, "arcenal.sqlite3")
         os.environ["ARCENAL_UPLOAD_DIR"] = os.path.join(cls.temp_dir.name, "uploads")
+        os.environ["ARCENAL_ARCHIVE_DIR"] = os.path.join(cls.temp_dir.name, "exports")
         os.environ["ARCENAL_ALLOW_ANONYMOUS"] = "1"
         cls.application = staticmethod(importlib.import_module("backend.app").application)
 
@@ -61,6 +62,28 @@ class BackendTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(result["deleted"])
         status, _ = self.call("GET", "/api/archives/archive-1")
+        self.assertEqual(status, 404)
+
+    def test_exported_pdf_is_stored_displayed_and_deleted(self):
+        state = {"name": "Plan PDF", "circles": [], "interventions": []}
+        status, _ = self.call("POST", "/api/archives", {"id": "archive-pdf", "exportName": "plan radio", "state": state})
+        self.assertEqual(status, 201)
+        status, listing = self.call("GET", "/api/archives")
+        item = next(archive for archive in listing["archives"] if archive["id"] == "archive-pdf")
+        self.assertFalse(item["has_pdf"])
+        self.assertNotIn("pdf_path", item)
+
+        pdf = b"%PDF-1.4\n% archived export\n"
+        status, stored = self.call("PUT", "/api/archives/archive-pdf/pdf", raw=pdf)
+        self.assertEqual(status, 200)
+        self.assertTrue(stored["stored"])
+        status, downloaded = self.call("GET", "/api/archives/archive-pdf/pdf")
+        self.assertEqual(status, 200)
+        self.assertEqual(downloaded, pdf)
+
+        status, _ = self.call("DELETE", "/api/archives/archive-pdf")
+        self.assertEqual(status, 200)
+        status, _ = self.call("GET", "/api/archives/archive-pdf/pdf")
         self.assertEqual(status, 404)
 
     def test_upload_rejects_unknown_format(self):

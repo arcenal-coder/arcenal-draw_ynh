@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import pathlib
 import re
 import uuid
 from http import HTTPStatus
@@ -11,6 +12,8 @@ from backend.importer import ImportErrorSafe, convert_upload, delete_import, ori
 
 
 MAX_JSON_BYTES = 12 * 1024 * 1024
+MAX_ARCHIVE_PDF_BYTES = 150 * 1024 * 1024
+ARCHIVE_DIR = pathlib.Path(os.environ.get("ARCENAL_ARCHIVE_DIR", str(pathlib.Path(db.DB_PATH).parent / "exports")))
 ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,80}$")
 LOGGER = logging.getLogger("arcenal_draw")
 
@@ -126,13 +129,55 @@ def route(environ, start_response):
         db.save_archive(owner, archive_id, data.get("projectId"), data.get("exportName") or "Export PDF", data.get("state") or {})
         return response(start_response, HTTPStatus.CREATED, {"id": archive_id})
 
+    archive_pdf_match = re.fullmatch(r"/api/archives/([^/]+)/pdf", path)
+    if archive_pdf_match and method in {"GET", "PUT"}:
+        archive_id = archive_pdf_match.group(1)
+        if not ID_PATTERN.fullmatch(archive_id):
+            return response(start_response, HTTPStatus.BAD_REQUEST, {"error": "Identifiant invalide."})
+        if method == "GET":
+            pdf_path = db.get_archive_pdf_path(owner, archive_id)
+            if not pdf_path or not pathlib.Path(pdf_path).is_file():
+                return response(start_response, HTTPStatus.NOT_FOUND, {"error": "PDF archivé introuvable."})
+            return file_response(environ, start_response, pathlib.Path(pdf_path), "application/pdf")
+        if not db.get_archive(owner, archive_id):
+            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Archive introuvable."})
+        try:
+            length = int(environ.get("CONTENT_LENGTH") or 0)
+        except ValueError as error:
+            raise ValueError("Longueur du PDF invalide.") from error
+        if length < 5 or length > MAX_ARCHIVE_PDF_BYTES:
+            raise ValueError("PDF vide ou supérieur à 150 Mo.")
+        ARCHIVE_DIR.mkdir(parents=True, mode=0o750, exist_ok=True)
+        target = ARCHIVE_DIR / f"{archive_id}.pdf"
+        temporary = ARCHIVE_DIR / f".{archive_id}.part"
+        remaining = length
+        header = b""
+        with temporary.open("wb") as destination:
+            while remaining:
+                chunk = environ["wsgi.input"].read(min(1024 * 1024, remaining))
+                if not chunk:
+                    break
+                if len(header) < 8:
+                    header = (header + chunk)[:8]
+                destination.write(chunk)
+                remaining -= len(chunk)
+        if remaining or not header.startswith(b"%PDF-"):
+            temporary.unlink(missing_ok=True)
+            raise ValueError("Fichier PDF incomplet ou invalide.")
+        os.replace(temporary, target)
+        db.set_archive_pdf_path(owner, archive_id, str(target))
+        return response(start_response, HTTPStatus.OK, {"stored": True})
+
     archive_match = re.fullmatch(r"/api/archives/([^/]+)", path)
     if archive_match and method in {"GET", "DELETE"}:
         archive_id = archive_match.group(1)
         if not ID_PATTERN.fullmatch(archive_id):
             return response(start_response, HTTPStatus.BAD_REQUEST, {"error": "Identifiant invalide."})
         if method == "DELETE":
+            pdf_path = db.get_archive_pdf_path(owner, archive_id)
             deleted = db.delete_archive(owner, archive_id)
+            if deleted and pdf_path:
+                pathlib.Path(pdf_path).unlink(missing_ok=True)
             return response(start_response, HTTPStatus.OK, {"deleted": True}) if deleted else response(start_response, HTTPStatus.NOT_FOUND, {"error": "Archive introuvable."})
         archive = db.get_archive(owner, archive_id)
         return response(start_response, HTTPStatus.OK, archive) if archive else response(start_response, HTTPStatus.NOT_FOUND, {"error": "Archive introuvable."})

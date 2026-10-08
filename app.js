@@ -219,12 +219,12 @@ function renderArchives(source = null) {
   const container = document.querySelector('#export-archives');
   const archives = source === null ? loadArchives() : source;
   const search = document.querySelector('#archive-search');
-  if (!archives.length) {
+  const normalized = archives.map((archive) => ({ ...archive, exportName: archive.exportName || archive.export_name, exportedAt: archive.exportedAt || archive.created_at, server: Boolean(archive.created_at) })).filter((archive) => archive.has_pdf);
+  if (!normalized.length) {
     container.innerHTML = '<div class="card-grid"><article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>Aucun export archivé</strong><span>Chaque export PDF créera automatiquement une copie ici.</span></div></article></div>';
     search.hidden = true;
     return;
   }
-  const normalized = archives.map((archive) => ({ ...archive, exportName: archive.exportName || archive.export_name, exportedAt: archive.exportedAt || archive.created_at, server: Boolean(archive.created_at) }));
   search.hidden = normalized.length <= 3;
   const query = search.value.trim().toLowerCase();
   const filtered = query ? normalized.filter((archive) => `${archive.exportName} ${searchableDate(archive.exportedAt)}`.toLowerCase().includes(query)) : normalized.slice(0, 3);
@@ -232,14 +232,11 @@ function renderArchives(source = null) {
   container.innerHTML = visibleDays.map((day) => {
     const items = filtered.filter((archive) => archive.exportedAt.startsWith(day));
     if (!items.length) return '';
-    const cards = items.map((archive) => `<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>${escapeText(archive.exportName)}</strong><span>${new Date(archive.exportedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><div class="card-actions"><button type="button" data-open-archive="${archive.id}" data-server="${archive.server}">Ouvrir</button><button class="danger-action" type="button" data-delete-archive="${archive.id}" data-server="${archive.server}">Supprimer</button></div></div></article>`).join('');
+    const cards = items.map((archive) => `<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>${escapeText(archive.exportName)}</strong><span>${new Date(archive.exportedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><div class="card-actions"><button type="button" data-view-archive="${archive.id}">Afficher</button><button class="danger-action" type="button" data-delete-archive="${archive.id}" data-server="${archive.server}">Supprimer</button></div></div></article>`).join('');
     return `<section class="archive-date-group"><h3>${new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR', { dateStyle: 'long' })}</h3><div class="card-grid">${cards}</div></section>`;
   }).join('') || '<p class="empty-search">Aucun export ne correspond à cette recherche.</p>';
-  container.querySelectorAll('[data-open-archive]').forEach((button) => button.addEventListener('click', async () => {
-    const archive = normalized.find((item) => item.id === button.dataset.openArchive);
-    if (!archive) return;
-    const savedArchive = archive.server ? await apiRequest(`archives/${encodeURIComponent(archive.id)}`) : JSON.parse(JSON.stringify(archive.state));
-    await restoreProject(savedArchive);
+  container.querySelectorAll('[data-view-archive]').forEach((button) => button.addEventListener('click', () => {
+    window.open(apiUrl(`archives/${encodeURIComponent(button.dataset.viewArchive)}/pdf`), '_blank', 'noopener');
   }));
   container.querySelectorAll('[data-delete-archive]').forEach((button) => button.addEventListener('click', async () => {
     const archive = normalized.find((item) => item.id === button.dataset.deleteArchive);
@@ -315,7 +312,7 @@ async function refreshServerLibrary() {
   }
   if (archiveResult.status === 'fulfilled') {
     serverArchives = archiveResult.value.archives || [];
-    if (serverArchives.length) renderArchives(serverArchives);
+    renderArchives(serverArchives);
   }
   if (planResult.status === 'fulfilled') {
     reusablePlans = planResult.value.plans || [];
@@ -1756,23 +1753,27 @@ function exportFileName() {
   return `${date} plan radio ${client} ${location}`.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
 }
 
-function archiveCurrentExport(exportName) {
-  const archives = loadArchives();
-  archives.unshift({ id: uid('archive'), exportName, exportedAt: new Date().toISOString(), state: JSON.parse(JSON.stringify(state)) });
+async function archiveCurrentExport(exportName, pdfBlob) {
+  if (!serverAvailable()) return;
+  const archiveId = uid('archive');
   try {
-    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives.slice(0, 12)));
-    document.querySelector('#save-status').textContent = 'Export archivé';
-  } catch (error) {
-    document.querySelector('#save-status').textContent = 'Archive locale saturée';
-  }
-  renderArchives();
-  if (serverAvailable()) {
-    apiRequest('archives', {
+    await apiRequest('archives', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: uid('archive'), projectId: state.projectId, exportName, state }),
-    }).catch(() => { document.querySelector('#save-status').textContent = 'PDF archivé localement uniquement'; });
+      body: JSON.stringify({ id: archiveId, projectId: state.projectId, exportName, state }),
+    });
+    await apiRequest(`archives/${encodeURIComponent(archiveId)}/pdf`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/pdf' },
+      body: pdfBlob,
+    });
+  } catch (error) {
+    await apiRequest(`archives/${encodeURIComponent(archiveId)}`, { method: 'DELETE' }).catch(() => {});
+    throw error;
   }
+  const result = await apiRequest('archives');
+  serverArchives = result.archives || [];
+  renderArchives(serverArchives);
 }
 
 function blobToDataUrl(blob) {
@@ -1902,7 +1903,11 @@ async function exportUniversalPdf(exportName) {
   const pageWidth = (widthMm / 25.4) * 72;
   const pageHeight = (heightMm / 25.4) * 72;
   const pdf = universalPdfBytes(new Uint8Array(await jpegBlob.arrayBuffer()), canvas.width, canvas.height, pageWidth, pageHeight);
-  const url = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
+  return new Blob([pdf], { type: 'application/pdf' });
+}
+
+function downloadPdf(pdfBlob, exportName) {
+  const url = URL.createObjectURL(pdfBlob);
   const link = document.createElement('a');
   link.href = url;
   link.download = `${exportName}.pdf`;
@@ -1917,8 +1922,9 @@ document.querySelector('#export-button').addEventListener('click', async () => {
   button.disabled = true;
   try {
     document.querySelector('#save-status').textContent = 'Préparation du PDF universel 600 DPI…';
-    await exportUniversalPdf(exportName);
-    archiveCurrentExport(exportName);
+    const pdfBlob = await exportUniversalPdf(exportName);
+    downloadPdf(pdfBlob, exportName);
+    await archiveCurrentExport(exportName, pdfBlob);
     document.querySelector('#save-status').textContent = 'PDF universel 600 DPI téléchargé';
   } catch (error) {
     console.error('Export PDF impossible', error);
