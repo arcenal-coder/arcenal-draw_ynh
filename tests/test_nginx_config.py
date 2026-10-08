@@ -29,8 +29,8 @@ class NginxConfigTests(unittest.TestCase):
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
 
         self.assertIn('Cache-Control "no-cache, must-revalidate"', nginx)
-        self.assertIn('styles.css?v=0.9.8', markup)
-        self.assertIn('app.js?v=0.9.8', markup)
+        self.assertIn('styles.css?v=0.9.9', markup)
+        self.assertIn('app.js?v=0.9.9', markup)
 
     def test_demo_plan_is_not_shipped(self):
         app = (ROOT / "app.js").read_text(encoding="utf-8")
@@ -64,8 +64,7 @@ class SystemdConfigTests(unittest.TestCase):
         self.assertNotIn("libredwg", combined)
         self.assertNotIn("dwg2dxf", combined)
         self.assertNotIn("ezdxf", combined)
-        self.assertIn("librsvg2-bin", manifest)
-        self.assertIn("python3-pypdf2", manifest)
+        self.assertNotIn("librsvg", combined)
         self.assertIn('ynh_safe_rm "$install_dir/libredwg"', upgrade)
         self.assertNotIn("install_libredwg", upgrade)
 

@@ -2,7 +2,6 @@ const NS = 'http://www.w3.org/2000/svg';
 const STORAGE_KEY = 'arcenal-draw-poc-v2';
 const ARCHIVE_KEY = 'arcenal-draw-export-archives-v1';
 const AUTHOR_PROFILE_KEY = 'arcenal-draw-author-profile-v1';
-const UNIVERSAL_PDF_DPI = 600;
 const DOSE_CONSTANTS = { 'Se-75': 55000, 'Ir-192': 130000 };
 const COLORS = ['#e2444f', '#287dc0', '#2d9960', '#ef922f', '#7544a8', '#00838f', '#c45100', '#596b23', '#b23a7a', '#536d8f'];
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
@@ -219,12 +218,12 @@ function renderArchives(source = null) {
   const container = document.querySelector('#export-archives');
   const archives = source === null ? loadArchives() : source;
   const search = document.querySelector('#archive-search');
-  const normalized = archives.map((archive) => ({ ...archive, exportName: archive.exportName || archive.export_name, exportedAt: archive.exportedAt || archive.created_at, server: Boolean(archive.created_at) })).filter((archive) => archive.has_pdf);
-  if (!normalized.length) {
+  if (!archives.length) {
     container.innerHTML = '<div class="card-grid"><article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>Aucun export archivé</strong><span>Chaque export PDF créera automatiquement une copie ici.</span></div></article></div>';
     search.hidden = true;
     return;
   }
+  const normalized = archives.map((archive) => ({ ...archive, exportName: archive.exportName || archive.export_name, exportedAt: archive.exportedAt || archive.created_at, server: Boolean(archive.created_at) }));
   search.hidden = normalized.length <= 3;
   const query = search.value.trim().toLowerCase();
   const filtered = query ? normalized.filter((archive) => `${archive.exportName} ${searchableDate(archive.exportedAt)}`.toLowerCase().includes(query)) : normalized.slice(0, 3);
@@ -235,8 +234,15 @@ function renderArchives(source = null) {
     const cards = items.map((archive) => `<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>${escapeText(archive.exportName)}</strong><span>${new Date(archive.exportedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><div class="card-actions"><button type="button" data-view-archive="${archive.id}">Afficher</button><button class="danger-action" type="button" data-delete-archive="${archive.id}" data-server="${archive.server}">Supprimer</button></div></div></article>`).join('');
     return `<section class="archive-date-group"><h3>${new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR', { dateStyle: 'long' })}</h3><div class="card-grid">${cards}</div></section>`;
   }).join('') || '<p class="empty-search">Aucun export ne correspond à cette recherche.</p>';
-  container.querySelectorAll('[data-view-archive]').forEach((button) => button.addEventListener('click', () => {
-    window.open(apiUrl(`archives/${encodeURIComponent(button.dataset.viewArchive)}/pdf`), '_blank', 'noopener');
+  container.querySelectorAll('[data-view-archive]').forEach((button) => button.addEventListener('click', async () => {
+    const archive = normalized.find((item) => item.id === button.dataset.viewArchive);
+    if (!archive) return;
+    if (archive.has_pdf) {
+      window.open(apiUrl(`archives/${encodeURIComponent(archive.id)}/pdf`), '_blank', 'noopener');
+      return;
+    }
+    const savedArchive = archive.server ? await apiRequest(`archives/${encodeURIComponent(archive.id)}`) : JSON.parse(JSON.stringify(archive.state));
+    await restoreProject(savedArchive);
   }));
   container.querySelectorAll('[data-delete-archive]').forEach((button) => button.addEventListener('click', async () => {
     const archive = normalized.find((item) => item.id === button.dataset.deleteArchive);
@@ -1753,191 +1759,35 @@ function exportFileName() {
   return `${date} plan radio ${client} ${location}`.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
 }
 
-async function archiveCurrentExport(exportName, pdfBlob) {
-  if (!serverAvailable()) return;
-  const archiveId = uid('archive');
+function archiveCurrentExport(exportName) {
+  const archives = loadArchives();
+  archives.unshift({ id: uid('archive'), exportName, exportedAt: new Date().toISOString(), state: JSON.parse(JSON.stringify(state)) });
   try {
-    await apiRequest('archives', {
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives.slice(0, 12)));
+    document.querySelector('#save-status').textContent = 'Export archivé';
+  } catch (error) {
+    document.querySelector('#save-status').textContent = 'Archive locale saturée';
+  }
+  renderArchives();
+  if (serverAvailable()) {
+    apiRequest('archives', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: archiveId, projectId: state.projectId, exportName, state }),
-    });
-    await apiRequest(`archives/${encodeURIComponent(archiveId)}/pdf`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/pdf' },
-      body: pdfBlob,
-    });
-  } catch (error) {
-    await apiRequest(`archives/${encodeURIComponent(archiveId)}`, { method: 'DELETE' }).catch(() => {});
-    throw error;
+      body: JSON.stringify({ id: uid('archive'), projectId: state.projectId, exportName, state }),
+    }).catch(() => { document.querySelector('#save-status').textContent = 'PDF archivé localement uniquement'; });
   }
-  const result = await apiRequest('archives');
-  serverArchives = result.archives || [];
-  renderArchives(serverArchives);
-}
-
-function blobToDataUrl(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(blob);
-  });
-}
-
-async function inlineSvgImages(root) {
-  await Promise.all([...root.querySelectorAll('image')].map(async (image) => {
-    const href = image.getAttribute('href') || image.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
-    if (!href || href.startsWith('data:')) return;
-    const response = await fetch(new URL(href, document.baseURI), { credentials: 'same-origin' });
-    if (!response.ok) throw new Error(`Ressource graphique indisponible (${response.status})`);
-    image.setAttribute('href', await blobToDataUrl(await response.blob()));
-  }));
-}
-
-function drawSvgOnCanvas(canvas, svgRoot) {
-  return new Promise((resolve, reject) => {
-    const markup = new XMLSerializer().serializeToString(svgRoot);
-    const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
-    const image = new Image();
-    image.onload = () => {
-      try {
-        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve();
-      } catch (error) {
-        reject(error);
-      } finally {
-        URL.revokeObjectURL(url);
-      }
-    };
-    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Composition graphique impossible.')); };
-    image.src = url;
-  });
-}
-
-function concatenateBytes(parts) {
-  const size = parts.reduce((total, part) => total + part.length, 0);
-  const output = new Uint8Array(size);
-  let offset = 0;
-  parts.forEach((part) => { output.set(part, offset); offset += part.length; });
-  return output;
-}
-
-function universalPdfBytes(jpegBytes, pixelWidth, pixelHeight, pageWidth, pageHeight) {
-  const encode = (value) => new TextEncoder().encode(value);
-  const content = encode(`q\n${pageWidth.toFixed(3)} 0 0 ${pageHeight.toFixed(3)} 0 0 cm\n/Im0 Do\nQ\n`);
-  const objects = [
-    encode('<< /Type /Catalog /Pages 2 0 R >>'),
-    encode('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'),
-    encode(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth.toFixed(3)} ${pageHeight.toFixed(3)}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`),
-    concatenateBytes([encode(`<< /Type /XObject /Subtype /Image /Width ${pixelWidth} /Height ${pixelHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`), jpegBytes, encode('\nendstream')]),
-    concatenateBytes([encode(`<< /Length ${content.length} >>\nstream\n`), content, encode('endstream')]),
-  ];
-  const parts = [encode('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n')];
-  const offsets = [0];
-  let length = parts[0].length;
-  objects.forEach((object, index) => {
-    offsets.push(length);
-    const wrapped = concatenateBytes([encode(`${index + 1} 0 obj\n`), object, encode('\nendobj\n')]);
-    parts.push(wrapped);
-    length += wrapped.length;
-  });
-  const xrefOffset = length;
-  const xref = [`xref\n0 ${objects.length + 1}\n`, '0000000000 65535 f \n', ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)].join('');
-  parts.push(encode(`${xref}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`));
-  return concatenateBytes(parts);
-}
-
-async function exportUniversalPdf(exportName) {
-  const portrait = state.orientation === 'portrait';
-  const widthMm = portrait ? 297 : 420;
-  const heightMm = portrait ? 420 : 297;
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round((widthMm / 25.4) * UNIVERSAL_PDF_DPI);
-  canvas.height = Math.round((heightMm / 25.4) * UNIVERSAL_PDF_DPI);
-  const context = canvas.getContext('2d', { alpha: false });
-  context.fillStyle = '#fff';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  const overlay = sheet.cloneNode(true);
-  overlay.setAttribute('xmlns', NS);
-  overlay.setAttribute('width', widthMm);
-  overlay.setAttribute('height', heightMm);
-  overlay.querySelector('#selection-box-layer')?.remove();
-  await inlineSvgImages(overlay);
-  document.querySelector('#save-status').textContent = 'Composition du cartouche et des annotations…';
-  await drawSvgOnCanvas(canvas, overlay);
-  const jpegBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.96));
-  if (!jpegBlob) throw new Error('Création de l’image 600 DPI impossible.');
-  const pageWidth = (widthMm / 25.4) * 72;
-  const pageHeight = (heightMm / 25.4) * 72;
-  const pdf = universalPdfBytes(new Uint8Array(await jpegBlob.arrayBuffer()), canvas.width, canvas.height, pageWidth, pageHeight);
-  return new Blob([pdf], { type: 'application/pdf' });
-}
-
-async function exportVectorPdf() {
-  if (!state.planFile?.id) throw new Error('PDF original introuvable.');
-  const portrait = state.orientation === 'portrait';
-  const widthMm = portrait ? 297 : 420;
-  const heightMm = portrait ? 420 : 297;
-  const overlay = sheet.cloneNode(true);
-  overlay.setAttribute('xmlns', NS);
-  overlay.setAttribute('width', `${widthMm}mm`);
-  overlay.setAttribute('height', `${heightMm}mm`);
-  overlay.setAttribute('viewBox', `0 0 ${widthMm} ${heightMm}`);
-  overlay.querySelector('#selection-box-layer')?.remove();
-  overlay.querySelector('#sheet-background')?.remove();
-  overlay.querySelector('#plan-preview')?.remove();
-  await inlineSvgImages(overlay);
-  const response = await fetch(apiUrl('exports/vector'), {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      planId: state.planFile.id,
-      overlaySvg: new XMLSerializer().serializeToString(overlay),
-      orientation: state.orientation,
-      zoom: mapScale(),
-      panX: state.panX,
-      panY: state.panY,
-    }),
-  });
-  if (!response.ok) {
-    const result = await response.json().catch(() => ({}));
-    throw new Error(result.error || `Composition PDF impossible (${response.status})`);
-  }
-  const pdf = await response.blob();
-  if (pdf.type !== 'application/pdf' || pdf.size < 10) throw new Error('Le PDF vectoriel reçu est invalide.');
-  return pdf;
-}
-
-function downloadPdf(pdfBlob, exportName) {
-  const url = URL.createObjectURL(pdfBlob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${exportName}.pdf`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 document.querySelector('#export-button').addEventListener('click', async () => {
   saveState();
   const exportName = exportFileName();
-  const button = document.querySelector('#export-button');
-  button.disabled = true;
-  try {
-    const vectorSource = state.planFile?.extension === '.pdf';
-    document.querySelector('#save-status').textContent = vectorSource ? 'Composition du PDF vectoriel…' : 'Préparation du PDF image 600 DPI…';
-    const pdfBlob = vectorSource ? await exportVectorPdf() : await exportUniversalPdf(exportName);
-    downloadPdf(pdfBlob, exportName);
-    await archiveCurrentExport(exportName, pdfBlob);
-    document.querySelector('#save-status').textContent = vectorSource ? 'PDF vectoriel téléchargé' : 'PDF image 600 DPI téléchargé';
-  } catch (error) {
-    console.error('Export PDF impossible', error);
-    document.querySelector('#save-status').textContent = `Export PDF impossible : ${error.message}`;
-  } finally {
-    button.disabled = false;
-    renderPlanPreview();
-  }
+  archiveCurrentExport(exportName);
+  const previousTitle = document.title;
+  document.title = exportName;
+  window.addEventListener('afterprint', () => {
+    document.title = previousTitle;
+  }, { once: true });
+  window.print();
 });
 document.querySelector('#recalibrate-button').addEventListener('click', () => beginScaleSetup(state.baseName, true));
 document.querySelector('#start-calibration').addEventListener('click', () => beginScaleSetup(state.baseName));

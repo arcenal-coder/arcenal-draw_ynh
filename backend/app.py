@@ -9,7 +9,6 @@ from urllib.parse import unquote
 
 from backend import db
 from backend.importer import ImportErrorSafe, convert_upload, delete_import, original_file, preview_file, store_upload
-from backend.pdf_export import ExportErrorSafe, build_hybrid_pdf
 
 
 MAX_JSON_BYTES = 12 * 1024 * 1024
@@ -63,12 +62,12 @@ def file_response(environ, start_response, path, media_type):
     return chunks()
 
 
-def read_json(environ, max_bytes=MAX_JSON_BYTES):
+def read_json(environ):
     try:
         length = int(environ.get("CONTENT_LENGTH") or 0)
     except ValueError as error:
         raise ValueError("Longueur invalide.") from error
-    if length < 1 or length > max_bytes:
+    if length < 1 or length > MAX_JSON_BYTES:
         raise ValueError("Corps JSON vide ou trop volumineux.")
     return json.loads(environ["wsgi.input"].read(length).decode("utf-8"))
 
@@ -85,7 +84,7 @@ def current_user(environ):
 def application(environ, start_response):
     try:
         return route(environ, start_response)
-    except (ImportErrorSafe, ExportErrorSafe) as error:
+    except ImportErrorSafe as error:
         return response(start_response, HTTPStatus.BAD_REQUEST, {"error": str(error)})
     except (ValueError, json.JSONDecodeError) as error:
         return response(start_response, HTTPStatus.BAD_REQUEST, {"error": str(error)})
@@ -129,27 +128,6 @@ def route(environ, start_response):
             raise ValueError("Identifiant d’archive invalide.")
         db.save_archive(owner, archive_id, data.get("projectId"), data.get("exportName") or "Export PDF", data.get("state") or {})
         return response(start_response, HTTPStatus.CREATED, {"id": archive_id})
-
-    if path == "/api/exports/vector" and method == "POST":
-        data = read_json(environ, max_bytes=25 * 1024 * 1024)
-        plan_id = str(data.get("planId") or "")
-        if not re.fullmatch(r"[a-fA-F0-9]{32}", plan_id):
-            raise ValueError("Identifiant de plan invalide.")
-        plan = db.get_plan_original_path(owner, plan_id)
-        if not plan or pathlib.Path(plan["name"]).suffix.lower() != ".pdf":
-            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Plan PDF original introuvable."})
-        pdf = build_hybrid_pdf(
-            pathlib.Path(plan["path"]), str(data.get("overlaySvg") or ""),
-            data.get("orientation"), data.get("zoom"), data.get("panX"), data.get("panY"),
-        )
-        headers = [
-            ("Content-Type", "application/pdf"),
-            ("Content-Length", str(len(pdf))),
-            ("Cache-Control", "no-store"),
-            ("X-Content-Type-Options", "nosniff"),
-        ]
-        start_response("200 OK", headers)
-        return [pdf]
 
     archive_pdf_match = re.fullmatch(r"/api/archives/([^/]+)/pdf", path)
     if archive_pdf_match and method in {"GET", "PUT"}:

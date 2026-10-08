@@ -193,34 +193,26 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("event.altKey", javascript)
         self.assertIn(".impact-selection-box", stylesheet)
 
-    def test_pdf_export_is_a_flattened_universal_600_dpi_download(self):
+    def test_pdf_export_prints_the_visible_sheet_without_substitution(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
-        self.assertIn("const UNIVERSAL_PDF_DPI = 600", javascript)
-        self.assertIn("async function exportUniversalPdf(exportName)", javascript)
-        self.assertIn("canvas.toBlob(resolve, 'image/jpeg', 0.96)", javascript)
-        self.assertIn("/Filter /DCTDecode", javascript)
-        self.assertIn("link.download = `${exportName}.pdf`", javascript)
-        self.assertNotIn("window.print()", javascript)
+        stylesheet = (ROOT / "styles.css").read_text(encoding="utf-8")
         self.assertNotIn('id="print-vector-layer"', markup)
+        self.assertNotIn("prepareVectorExport", javascript)
+        self.assertNotIn("vector-print-ready", stylesheet)
+        self.assertIn("window.print()", javascript)
 
-    def test_native_pdf_export_preserves_the_vector_background(self):
-        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
-        self.assertIn("async function exportVectorPdf()", javascript)
-        self.assertIn("fetch(apiUrl('exports/vector')", javascript)
-        self.assertIn("overlay.querySelector('#sheet-background')?.remove()", javascript)
-        self.assertIn("vectorSource ? await exportVectorPdf() : await exportUniversalPdf(exportName)", javascript)
-        self.assertNotIn("async function drawOriginalPdfOnCanvas", javascript)
-
-    def test_pdf_archive_displays_the_saved_document(self):
+    def test_export_is_wysiwyg_and_keeps_archive_display_controls(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn('id="export-button">Export PDF</button>', markup)
-        self.assertIn('data-view-archive=', javascript)
-        self.assertIn('>Afficher</button>', javascript)
-        self.assertIn('/pdf`), \'_blank\'', javascript)
-        self.assertIn("body: pdfBlob", javascript)
-        self.assertNotIn('data-open-archive=', javascript)
+        self.assertIn("window.print()", javascript)
+        self.assertNotIn("UNIVERSAL_PDF_DPI", javascript)
+        self.assertNotIn("exportVectorPdf", javascript)
+        self.assertIn("data-view-archive=", javascript)
+        self.assertIn(">Afficher</button>", javascript)
+        self.assertIn("archive.has_pdf", javascript)
+        self.assertIn("/pdf`), '_blank'", javascript)
 
 
 if __name__ == "__main__":

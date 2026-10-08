@@ -64,64 +64,24 @@ class BackendTest(unittest.TestCase):
         status, _ = self.call("GET", "/api/archives/archive-1")
         self.assertEqual(status, 404)
 
-    def test_exported_pdf_is_stored_displayed_and_deleted(self):
+    def test_existing_pdf_archive_can_be_displayed_and_deleted(self):
         state = {"name": "Plan PDF", "circles": [], "interventions": []}
         status, _ = self.call("POST", "/api/archives", {"id": "archive-pdf", "exportName": "plan radio", "state": state})
         self.assertEqual(status, 201)
-        status, listing = self.call("GET", "/api/archives")
-        item = next(archive for archive in listing["archives"] if archive["id"] == "archive-pdf")
-        self.assertFalse(item["has_pdf"])
-        self.assertNotIn("pdf_path", item)
-
         pdf = b"%PDF-1.4\n% archived export\n"
         status, stored = self.call("PUT", "/api/archives/archive-pdf/pdf", raw=pdf)
         self.assertEqual(status, 200)
         self.assertTrue(stored["stored"])
+        status, listing = self.call("GET", "/api/archives")
+        item = next(archive for archive in listing["archives"] if archive["id"] == "archive-pdf")
+        self.assertTrue(item["has_pdf"])
         status, downloaded = self.call("GET", "/api/archives/archive-pdf/pdf")
         self.assertEqual(status, 200)
         self.assertEqual(downloaded, pdf)
-
         status, _ = self.call("DELETE", "/api/archives/archive-pdf")
         self.assertEqual(status, 200)
         status, _ = self.call("GET", "/api/archives/archive-pdf/pdf")
         self.assertEqual(status, 404)
-
-    def test_vector_export_uses_the_owned_original_pdf(self):
-        content = b"%PDF-1.4\n" + b"0" * 64
-        with mock.patch("backend.importer._convert_pdf_to_svg", return_value=False):
-            status, plan = self.call(
-                "POST", "/api/imports", raw=content,
-                headers={"HTTP_X_FILENAME": "plan-vectoriel.pdf"},
-            )
-        self.assertEqual(status, 201)
-        exported = b"%PDF-1.4\nvector-output"
-        payload = {
-            "planId": plan["id"],
-            "overlaySvg": '<svg xmlns="http://www.w3.org/2000/svg"/>',
-            "orientation": "landscape", "zoom": 1, "panX": 0, "panY": 0,
-        }
-        with mock.patch("backend.app.build_hybrid_pdf", return_value=exported) as build:
-            status, result = self.call("POST", "/api/exports/vector", payload)
-        self.assertEqual(status, 200)
-        self.assertEqual(result, exported)
-        self.assertEqual(build.call_args.args[0].suffix, ".pdf")
-
-    def test_vector_export_rejects_an_unowned_plan(self):
-        status, result = self.call("POST", "/api/exports/vector", {
-            "planId": "0" * 32,
-            "overlaySvg": '<svg xmlns="http://www.w3.org/2000/svg"/>',
-            "orientation": "landscape", "zoom": 1, "panX": 0, "panY": 0,
-        })
-        self.assertEqual(status, 404)
-        self.assertIn("introuvable", result["error"])
-
-    def test_vector_overlay_rejects_external_resources(self):
-        from backend.pdf_export import ExportErrorSafe, _validate_svg
-
-        with self.assertRaises(ExportErrorSafe):
-            _validate_svg('<svg xmlns="http://www.w3.org/2000/svg"><image href="https://example.test/logo.png"/></svg>')
-        with self.assertRaises(ExportErrorSafe):
-            _validate_svg('<!DOCTYPE svg><svg xmlns="http://www.w3.org/2000/svg"/>')
 
     def test_upload_rejects_unknown_format(self):
         status, result = self.call(

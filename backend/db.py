@@ -182,17 +182,6 @@ def list_plan_files(owner, limit=100):
     return plans
 
 
-def get_plan_original_path(owner, plan_id):
-    with connection() as database:
-        row = database.execute(
-            "SELECT original_path, original_name FROM plan_files WHERE owner = ? AND id = ?",
-            (owner, plan_id),
-        ).fetchone()
-    if not row:
-        return None
-    return {"path": row["original_path"], "name": row["original_name"]}
-
-
 def delete_plan_file(owner, plan_id):
     with connection() as database:
         cursor = database.execute(
