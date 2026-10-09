@@ -201,6 +201,17 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("state.overzoneMerges.push", javascript)
         self.assertIn("key.startsWith('overmerge:')", javascript)
 
+    def test_onyx_brand_and_responsive_forms_are_integrated(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "styles.css").read_text(encoding="utf-8")
+        self.assertTrue((ROOT / "assets" / "onyx-logo.png").is_file())
+        self.assertIn('class="onyx-home-logo"', markup)
+        self.assertIn('href="assets/onyx-logo.png"', javascript)
+        self.assertNotIn('>ARCENAL DRAW</text>', javascript)
+        self.assertIn(".settings-section-heading", stylesheet)
+        self.assertIn(".activity-row{grid-template-columns:minmax(0,1fr) 72px", stylesheet)
+
     def test_pdf_export_prints_the_visible_sheet_without_substitution(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")

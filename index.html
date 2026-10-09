@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>ARCenal DRAW — POC fonctionnel</title>
-    <link rel="stylesheet" href="styles.css?v=0.9.10" />
+    <link rel="stylesheet" href="styles.css?v=0.9.11" />
     <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
   </head>
   <body>
     <section id="home-view" class="home-view">
       <header class="home-header">
-        <div class="brand-mark">A</div>
+        <img class="onyx-home-logo" src="assets/onyx-logo.png" alt="ONYX" />
         <div><strong>ARCenal DRAW</strong><span>Plans techniques &amp; annotations radiologiques</span></div>
       </header>
       <main class="home-content">
@@ -126,27 +126,35 @@
           <dialog id="settings-dialog" class="settings-dialog">
           <section id="settings-panel" class="panel">
             <div class="settings-modal-header"><div><p class="eyebrow">PARAMÈTRES</p><h2>Document et affichage</h2></div><button id="settings-close" type="button" aria-label="Fermer les paramètres">✕ Fermer</button></div>
-            <div class="settings-grid">
-              <label class="full">Apparence<select id="settings-theme"><option value="system">Système</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
-              <label>Orientation<select id="settings-orientation"><option value="landscape">A3 paysage</option><option value="portrait">A3 portrait</option></select></label>
-              <label>Marge papier<input id="settings-margin" type="number" min="5" max="20" step="1" value="5" /></label>
-              <label class="full">Zoom du plan — 1× à 50×<input id="settings-zoom" type="range" min="1" max="50" step="0.5" /></label>
-              <label>Transparence des zones<select id="settings-opacity"><option value="0">0 %</option><option value="25">25 %</option><option value="50">50 %</option><option value="75">75 %</option></select></label>
-              <label class="check-row full"><input id="settings-title-block" type="checkbox" checked /> Afficher le cartouche sur le plan et le PDF</label>
+            <div class="settings-section">
+              <div class="settings-section-heading"><span>01</span><div><h3>Document</h3><p>Format, apparence et lisibilité du plan.</p></div></div>
+              <div class="settings-grid">
+                <label>Apparence<select id="settings-theme"><option value="system">Système</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
+                <label>Orientation<select id="settings-orientation"><option value="landscape">A3 paysage</option><option value="portrait">A3 portrait</option></select></label>
+                <label>Marge papier<input id="settings-margin" type="number" min="5" max="20" step="1" value="5" /></label>
+                <label>Transparence des zones<select id="settings-opacity"><option value="0">0 %</option><option value="25">25 %</option><option value="50">50 %</option><option value="75">75 %</option></select></label>
+                <label class="full">Zoom du plan — 1× à 50×<input id="settings-zoom" type="range" min="1" max="50" step="0.5" /></label>
+                <label class="check-row full"><input id="settings-title-block" type="checkbox" checked /> Afficher le cartouche sur le plan et le PDF</label>
+              </div>
+              <div class="settings-actions"><button class="secondary" id="settings-recenter" type="button">Recentrer le plan</button><button class="secondary" id="settings-recalibrate" type="button">Calibrer</button></div>
+              <p class="settings-calibration" id="settings-calibration-status"></p>
             </div>
-            <div class="settings-actions"><button class="secondary" id="settings-recenter" type="button">Recentrer le plan</button><button class="secondary" id="settings-recalibrate" type="button">Calibrer</button></div>
-            <p class="settings-calibration" id="settings-calibration-status"></p>
-            <label class="validator-toggle check-row"><input id="validator-enabled" type="checkbox" /> Ajouter un encas « Validé par »</label>
-            <div id="validator-settings" hidden>
-              <div class="settings-grid"><label>Nom et prénom<input id="validator-name" type="text" placeholder="Nom Prénom" /></label><label>Fonction<input id="validator-role" type="text" placeholder="Fonction" /></label></div>
-              <label class="signature-drop" id="validator-signature-drop"><input id="validator-signature-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer la signature de validation</strong><small>PDF, PNG ou JPEG</small></label>
-              <div class="signature-file" id="validator-signature-preview" hidden><span>✓</span><strong></strong><button type="button" data-remove-signature="validator">Retirer</button></div>
+            <div class="settings-section">
+              <div class="settings-section-heading"><span>02</span><div><h3>Validation</h3><p>Ajoutez un visa au cartouche uniquement si nécessaire.</p></div></div>
+              <label class="validator-toggle check-row"><input id="validator-enabled" type="checkbox" /> Ajouter un encas « Validé par »</label>
+              <div id="validator-settings" hidden>
+                <div class="settings-grid"><label>Nom et prénom<input id="validator-name" type="text" placeholder="Nom Prénom" /></label><label>Fonction<input id="validator-role" type="text" placeholder="Fonction" /></label></div>
+                <label class="signature-drop" id="validator-signature-drop"><input id="validator-signature-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer la signature de validation</strong><small>PDF, PNG ou JPEG</small></label>
+                <div class="signature-file" id="validator-signature-preview" hidden><span>✓</span><strong></strong><button type="button" data-remove-signature="validator">Retirer</button></div>
+              </div>
             </div>
-            <h2 class="settings-subtitle">Client et logo</h2><p>Le logo et l’intitulé du client apparaîtront librement au-dessus du cartouche, alignés sur son montant gauche.</p>
-            <div class="settings-grid"><label class="full">Intitulé du client<input id="client-name" type="text" placeholder="Nom du client" /></label></div>
-            <label class="logo-drop" id="logo-drop"><input id="logo-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer un PDF, PNG ou JPEG</strong><small>ou cliquer pour choisir</small></label>
-            <div id="logo-preview" class="logo-preview" hidden><img alt="Aperçu du logo" /><div><strong id="logo-name"></strong><small id="logo-status"></small></div></div>
-            <button class="wide-action secondary-action" id="remove-logo" type="button" disabled>Retirer le logo</button>
+            <div class="settings-section">
+              <div class="settings-section-heading"><span>03</span><div><h3>Client et logo</h3><p>Ces éléments apparaissent au-dessus du cartouche final.</p></div></div>
+              <div class="settings-grid"><label class="full">Intitulé du client<input id="client-name" type="text" placeholder="Nom du client" /></label></div>
+              <label class="logo-drop" id="logo-drop"><input id="logo-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden /><span>＋</span><strong>Déposer un PDF, PNG ou JPEG</strong><small>ou cliquer pour choisir</small></label>
+              <div id="logo-preview" class="logo-preview" hidden><img alt="Aperçu du logo" /><div><strong id="logo-name"></strong><small id="logo-status"></small></div></div>
+              <button class="wide-action secondary-action" id="remove-logo" type="button" disabled>Retirer le logo</button>
+            </div>
           </section>
           </dialog>
           <section class="panel interventions-panel">
@@ -165,6 +173,6 @@
         <div class="dialog-actions"><button type="button" class="primary" id="start-calibration">Calibrer</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=0.9.10"></script>
+    <script src="app.js?v=0.9.11"></script>
   </body>
 </html>
