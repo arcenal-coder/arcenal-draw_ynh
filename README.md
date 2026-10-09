@@ -6,6 +6,8 @@ Le POC permet de valider l'accueil, les bases réutilisables, la calibration, un
 
 La synthèse fonctionnelle complète se trouve dans `SPECIFICATION_POC.md`.
 
+L’historique complet des versions, des décisions techniques et des repères de débogage se trouve dans [`HISTORIQUE_CONCEPTION.md`](HISTORIQUE_CONCEPTION.md).
+
 Les fonds de plan acceptés sont PDF, PNG et JPEG. Un PDF vectoriel est converti en SVG pour des déplacements et zooms fluides ; un PDF scanné reste lu progressivement avec PDF.js. Les PNG et JPEG restent natifs afin d’éviter une vectorisation lourde et imprécise. L’original est toujours conservé intact.
 
 ## Socle serveur
