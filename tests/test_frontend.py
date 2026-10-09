@@ -211,6 +211,11 @@ class FrontendTests(unittest.TestCase):
         self.assertNotIn('>ARCENAL DRAW</text>', javascript)
         self.assertIn(".settings-section-heading", stylesheet)
         self.assertIn(".activity-row{grid-template-columns:minmax(0,1fr) 72px", stylesheet)
+        self.assertIn("@container inspector (max-width:360px)", stylesheet)
+        self.assertIn("grid-template-columns:minmax(120px,1fr) minmax(76px,88px)", stylesheet)
+        self.assertIn("Outil de conception de plans d’impact radiologique", markup)
+        self.assertNotIn("PREUVE DE CONCEPT", markup)
+        self.assertIn('dominant-baseline="middle"', javascript)
 
     def test_pdf_export_prints_the_visible_sheet_without_substitution(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
