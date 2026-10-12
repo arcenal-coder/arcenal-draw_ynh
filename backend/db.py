@@ -182,6 +182,14 @@ def list_plan_files(owner, limit=100):
     return plans
 
 
+def has_plan_file(owner, plan_id):
+    with connection() as database:
+        row = database.execute(
+            "SELECT 1 FROM plan_files WHERE owner = ? AND id = ?", (owner, plan_id)
+        ).fetchone()
+    return row is not None
+
+
 def delete_plan_file(owner, plan_id):
     with connection() as database:
         cursor = database.execute(

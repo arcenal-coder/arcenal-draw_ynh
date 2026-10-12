@@ -1,4 +1,3 @@
-import hashlib
 import os
 import pathlib
 import re
@@ -33,7 +32,6 @@ def store_upload(stream, filename, content_length):
     target_dir = UPLOAD_DIR / upload_id
     target_dir.mkdir(parents=True, mode=0o750)
     target = target_dir / f"original{extension}"
-    digest = hashlib.sha256()
     remaining = content_length
     header = b""
     with target.open("xb") as destination:
@@ -44,7 +42,6 @@ def store_upload(stream, filename, content_length):
             if len(header) < 1024:
                 header = (header + chunk)[:1024]
             destination.write(chunk)
-            digest.update(chunk)
             remaining -= len(chunk)
     if remaining:
         shutil.rmtree(target_dir, ignore_errors=True)
@@ -63,7 +60,6 @@ def store_upload(stream, filename, content_length):
         "name": safe_name(filename),
         "extension": extension,
         "path": str(target),
-        "sha256": digest.hexdigest(),
         "requiresCalibration": True,
     }
 

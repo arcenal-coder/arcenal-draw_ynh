@@ -28,9 +28,18 @@ class NginxConfigTests(unittest.TestCase):
         nginx = (ROOT / "conf" / "nginx.conf").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn('Cache-Control "no-cache, must-revalidate"', nginx)
-        self.assertIn('styles.css?v=0.9.12', markup)
-        self.assertIn('app.js?v=0.9.12', markup)
+        self.assertIn('more_set_headers "Cache-Control: no-cache, must-revalidate"', nginx)
+        self.assertIn('styles.css?v=0.9.13', markup)
+        self.assertIn('app.js?v=0.9.13', markup)
+
+    def test_frontend_has_restrictive_security_headers(self):
+        nginx = (ROOT / "conf" / "nginx.conf").read_text(encoding="utf-8")
+
+        self.assertIn("Content-Security-Policy", nginx)
+        self.assertIn("object-src 'none'", nginx)
+        self.assertIn("frame-ancestors 'self'", nginx)
+        self.assertIn('more_set_headers "X-Content-Type-Options: nosniff"', nginx)
+        self.assertIn('more_set_headers "X-Frame-Options: SAMEORIGIN"', nginx)
 
     def test_demo_plan_is_not_shipped(self):
         app = (ROOT / "app.js").read_text(encoding="utf-8")
@@ -51,22 +60,29 @@ class SystemdConfigTests(unittest.TestCase):
         self.assertIn("ProtectSystem=strict", config)
         self.assertIn("ReadWritePaths=__DATA_DIR__", config)
         self.assertIn('dir = "/var/lib/__APP__"', manifest)
+        self.assertIn('default = "all_users"', manifest)
+        for directive in (
+            "NoNewPrivileges=true",
+            "DevicePolicy=closed",
+            "LockPersonality=true",
+            "PrivateDevices=true",
+            "ProtectKernelModules=true",
+            "ProtectKernelTunables=true",
+            "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6",
+            "RestrictNamespaces=true",
+            "RestrictRealtime=true",
+            "RestrictSUIDSGID=true",
+            "SystemCallArchitectures=native",
+            "UMask=0027",
+        ):
+            self.assertIn(directive, config)
 
-    def test_package_has_no_cad_conversion_dependencies(self):
-        config = (ROOT / "conf" / "systemd.service").read_text(encoding="utf-8")
-        manifest = (ROOT / "manifest.toml").read_text(encoding="utf-8")
-        common = (ROOT / "scripts" / "_common.sh").read_text(encoding="utf-8")
-        install = (ROOT / "scripts" / "install").read_text(encoding="utf-8")
+    def test_upgrade_only_removes_replaced_application_directories(self):
         upgrade = (ROOT / "scripts" / "upgrade").read_text(encoding="utf-8")
-        workflow = (ROOT / ".github" / "workflows" / "verify.yml").read_text(encoding="utf-8")
 
-        combined = "\n".join((config, manifest, common, install, workflow)).lower()
-        self.assertNotIn("libredwg", combined)
-        self.assertNotIn("dwg2dxf", combined)
-        self.assertNotIn("ezdxf", combined)
-        self.assertNotIn("librsvg", combined)
-        self.assertIn('ynh_safe_rm "$install_dir/libredwg"', upgrade)
-        self.assertNotIn("install_libredwg", upgrade)
+        self.assertIn('ynh_safe_rm "$install_dir/web/assets"', upgrade)
+        self.assertIn('ynh_safe_rm "$install_dir/backend"', upgrade)
+        self.assertEqual(upgrade.count("ynh_safe_rm"), 2)
 
 
 if __name__ == "__main__":

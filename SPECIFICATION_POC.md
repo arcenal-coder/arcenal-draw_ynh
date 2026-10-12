@@ -107,7 +107,7 @@ Lorsque plusieurs zones radiologiques sont fusionnées, leurs surbalisages sont 
 - Conservation des cercles, zones fusionnées, interventions, couleurs, calibration, orientation et zoom du plan.
 - Sauvegarde forcée avant l'impression PDF.
 - Nom d'export automatique : `AAAA.MM.JJ plan radio CLIENT localisation`.
-- Chaque export crée une archive locale réouvrable depuis l'accueil ; le POC conserve les douze exports les plus récents.
+- Chaque export crée un instantané réouvrable de l’état du projet depuis l’accueil ; l’application conserve les douze instantanés les plus récents.
 - Export basé sur le même SVG que la feuille visible.
 - L'impression est contrainte à une unique feuille A3, sans page vierge préalable.
 

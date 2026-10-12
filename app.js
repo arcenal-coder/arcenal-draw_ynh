@@ -220,7 +220,7 @@ function renderArchives(source = null) {
   const archives = source === null ? loadArchives() : source;
   const search = document.querySelector('#archive-search');
   if (!archives.length) {
-    container.innerHTML = '<div class="card-grid"><article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>Aucun export archivé</strong><span>Chaque export PDF créera automatiquement une copie ici.</span></div></article></div>';
+    container.innerHTML = '<div class="card-grid"><article class="plan-card"><div class="plan-thumb"><span>↻</span></div><div class="plan-card-body"><strong>Aucun instantané d’export</strong><span>Chaque export PDF enregistrera ici l’état du projet correspondant.</span></div></article></div>';
     search.hidden = true;
     return;
   }
@@ -232,7 +232,10 @@ function renderArchives(source = null) {
   container.innerHTML = visibleDays.map((day) => {
     const items = filtered.filter((archive) => archive.exportedAt.startsWith(day));
     if (!items.length) return '';
-    const cards = items.map((archive) => `<article class="plan-card"><div class="plan-thumb"><span>PDF</span></div><div class="plan-card-body"><strong>${escapeText(archive.exportName)}</strong><span>${new Date(archive.exportedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><div class="card-actions"><button type="button" data-view-archive="${archive.id}">Afficher</button><button class="danger-action" type="button" data-delete-archive="${archive.id}" data-server="${archive.server}">Supprimer</button></div></div></article>`).join('');
+    const cards = items.map((archive) => {
+      const actionLabel = archive.has_pdf ? 'Afficher' : 'Reprendre';
+      return `<article class="plan-card"><div class="plan-thumb"><span>↻</span></div><div class="plan-card-body"><strong>${escapeText(archive.exportName)}</strong><span>${new Date(archive.exportedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span><div class="card-actions"><button type="button" data-view-archive="${archive.id}">${actionLabel}</button><button class="danger-action" type="button" data-delete-archive="${archive.id}" data-server="${archive.server}">Supprimer</button></div></div></article>`;
+    }).join('');
     return `<section class="archive-date-group"><h3>${new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR', { dateStyle: 'long' })}</h3><div class="card-grid">${cards}</div></section>`;
   }).join('') || '<p class="empty-search">Aucun export ne correspond à cette recherche.</p>';
   container.querySelectorAll('[data-view-archive]').forEach((button) => button.addEventListener('click', async () => {
@@ -247,7 +250,7 @@ function renderArchives(source = null) {
   }));
   container.querySelectorAll('[data-delete-archive]').forEach((button) => button.addEventListener('click', async () => {
     const archive = normalized.find((item) => item.id === button.dataset.deleteArchive);
-    if (!archive || !window.confirm(`Supprimer définitivement l’export « ${archive.exportName} » ?`)) return;
+    if (!archive || !window.confirm(`Supprimer définitivement l’instantané « ${archive.exportName} » ?`)) return;
     if (archive.server) {
       await apiRequest(`archives/${encodeURIComponent(archive.id)}`, { method: 'DELETE' });
       serverArchives = serverArchives.filter((item) => item.id !== archive.id);
@@ -547,7 +550,7 @@ async function ensurePdfPage(sourceKey) {
   pdfSourceKey = sourceKey;
   const pdfjs = await import('./assets/pdfjs/pdf.js');
   pdfjs.GlobalWorkerOptions.workerSrc = './assets/pdfjs/pdf.worker.js';
-  pdfDocument = await pdfjs.getDocument({ url: sourceKey, withCredentials: true, rangeChunkSize: 262144 }).promise;
+  pdfDocument = await pdfjs.getDocument({ url: sourceKey, withCredentials: true, rangeChunkSize: 262144, isEvalSupported: false, enableScripting: false }).promise;
   pdfPage = await pdfDocument.getPage(1);
   return pdfPage;
 }
@@ -1408,7 +1411,7 @@ function renderLogoSettings() {
 async function readPdfAsImage(file) {
   const pdfjs = await import('./assets/pdfjs/pdf.js');
   pdfjs.GlobalWorkerOptions.workerSrc = './assets/pdfjs/pdf.worker.js';
-  const documentPdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  const documentPdf = await pdfjs.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false, enableScripting: false }).promise;
   const page = await documentPdf.getPage(1);
   const base = page.getViewport({ scale: 1 });
   const scale = Math.min(2, 900 / Math.max(base.width, base.height));
@@ -1804,14 +1807,14 @@ function exportFileName() {
   return `${date} plan radio ${client} ${location}`.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
 }
 
-function archiveCurrentExport(exportName) {
+function saveExportSnapshot(exportName) {
   const archives = loadArchives();
   archives.unshift({ id: uid('archive'), exportName, exportedAt: new Date().toISOString(), state: JSON.parse(JSON.stringify(state)) });
   try {
     localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives.slice(0, 12)));
-    document.querySelector('#save-status').textContent = 'Export archivé';
+    document.querySelector('#save-status').textContent = 'Instantané d’export enregistré';
   } catch (error) {
-    document.querySelector('#save-status').textContent = 'Archive locale saturée';
+    document.querySelector('#save-status').textContent = 'Stockage local des instantanés saturé';
   }
   renderArchives();
   if (serverAvailable()) {
@@ -1819,14 +1822,14 @@ function archiveCurrentExport(exportName) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: uid('archive'), projectId: state.projectId, exportName, state }),
-    }).catch(() => { document.querySelector('#save-status').textContent = 'PDF archivé localement uniquement'; });
+    }).catch(() => { document.querySelector('#save-status').textContent = 'Instantané enregistré localement uniquement'; });
   }
 }
 
 document.querySelector('#export-button').addEventListener('click', async () => {
   saveState();
   const exportName = exportFileName();
-  archiveCurrentExport(exportName);
+  saveExportSnapshot(exportName);
   const previousTitle = document.title;
   document.title = exportName;
   window.addEventListener('afterprint', () => {

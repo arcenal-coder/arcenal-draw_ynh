@@ -2,9 +2,9 @@ packaging_format = 2
 
 id = "arcenal_draw"
 name = "ARCenal DRAW"
-description.fr = "Création et archivage de plans de contrôle gammagraphique"
-description.en = "Create and archive gamma radiography control plans"
-version = "0.9.12~ynh1"
+description.fr = "Conception de plans de contrôle gammagraphique"
+description.en = "Design gamma radiography control plans"
+version = "0.9.13~ynh1"
 maintainers = ["ARCenal"]
 
 [upstream]
@@ -31,7 +31,7 @@ ram.build = "500M"
 
     [install.init_main_permission]
     type = "group"
-    default = "visitors"
+    default = "all_users"
 
 [resources]
     [resources.system_user]

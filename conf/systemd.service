@@ -13,11 +13,25 @@ Environment=ARCENAL_UPLOAD_DIR=__DATA_DIR__/uploads
 ExecStart=/usr/bin/gunicorn --workers 2 --threads 2 --timeout 300 --bind 127.0.0.1:__PORT__ backend.app:application
 Restart=on-failure
 RestartSec=3
+UMask=0027
 PrivateTmp=true
+PrivateDevices=true
+DevicePolicy=closed
 ProtectSystem=strict
 ProtectHome=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
 ReadWritePaths=__DATA_DIR__
 NoNewPrivileges=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
 
 [Install]
 WantedBy=multi-user.target

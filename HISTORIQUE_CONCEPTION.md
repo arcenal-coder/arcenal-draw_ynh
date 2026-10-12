@@ -1,7 +1,7 @@
 # ARCenal DRAW — Historique de conception et des versions
 
-Dernière mise à jour : 9 octobre 2026  
-Version courante au moment de la rédaction : `0.9.12~ynh1`  
+Dernière mise à jour : 12 octobre 2026
+Version courante au moment de la rédaction : `0.9.13~ynh1`
 Dépôt : <https://github.com/arcenal-coder/arcenal-draw_ynh>
 
 ## Objet du document
@@ -123,7 +123,7 @@ Le prototype initial a défini les fonctions métier suivantes avant la créatio
 - Suppression définitive du fond de plan de démonstration et du code associé.
 - Nettoyage de l’interface et du modèle de données.
 
-### 0.4 — Mesure et expérimentation DWG
+### 0.4 — Mesure et expérimentation d’un import CAO
 
 #### `0.4.0~ynh1` — 3 octobre 2026 — `8945e6c`
 
@@ -133,13 +133,13 @@ Le prototype initial a défini les fonctions métier suivantes avant la créatio
 
 #### `0.4.1~ynh1` — `ac063b2`
 
-- Intégration expérimentale de LibreDWG au paquet YunoHost.
+- Intégration expérimentale d’un convertisseur CAO au paquet YunoHost.
 - Conversion DWG vers DXF avant exploitation.
 
-#### Maintenance LibreDWG
+#### Maintenance du convertisseur CAO
 
 - `0b94417` : compilation limitée au convertisseur réellement nécessaire afin d’alléger le paquet.
-- `0.4.2~ynh1` — `9478d1c` : tolérance des avertissements DWG non bloquants relatifs aux classes instables.
+- `0.4.2~ynh1` — `9478d1c` : tolérance des avertissements non bloquants relatifs aux classes CAO instables.
 - `0.4.3~ynh1` — 4 octobre 2026 — `c87c5c4` : conservation des définitions de blocs nécessaires lors de la lecture DXF.
 
 ### 0.5 — Abandon du moteur CAO embarqué
@@ -149,7 +149,7 @@ Le prototype initial a défini les fonctions métier suivantes avant la créatio
 - Décision structurante : abandon de l’import DWG/DXF direct.
 - Suppression des fonctions utilisateur liées à ces formats.
 - Recentrage sur des plans PDF fiables, complétés ensuite par PNG et JPEG.
-- Motif : rendu LibreDWG/DXF irrégulier, calques incomplets, blocs manquants et traits difficiles à normaliser automatiquement.
+- Motif : rendu CAO intermédiaire irrégulier, calques incomplets, blocs manquants et traits difficiles à normaliser automatiquement.
 
 #### Nettoyage et compatibilité de mise à niveau
 
@@ -352,11 +352,23 @@ Le prototype initial a défini les fonctions métier suivantes avant la créatio
 - Alignement vertical du logo ONYX et du titre « Plan de contrôle gammagraphique ».
 - Nouvelle présentation d’accueil : « Outil de conception de plans d’impact radiologique ».
 
+#### `0.9.13~ynh1` — 12 octobre 2026
+
+- Suppression de la dernière commande de nettoyage liée à l’ancien convertisseur CAO dans le script de mise à niveau YunoHost.
+- Suppression des références textuelles restantes à ce composant obsolète dans le projet.
+- Ajout d’un test de régression limitant le nettoyage de mise à niveau aux deux répertoires réellement remplacés.
+- Revue finale du code, du paquet YunoHost et de la sécurité applicative.
+- Correction du contrôle d’accès aux aperçus et fichiers originaux des plans importés.
+- Validation renforcée des JSON, calibrages, archives et échecs de conversion.
+- Durcissement de Nginx, PDF.js et du service systemd.
+- Accès initial réservé aux utilisateurs authentifiés et passage de la suite à 51 tests.
+- Renommage de la bibliothèque en « Instantanés d’export » : elle conserve l’état réouvrable du projet et ne prétend plus archiver le PDF imprimé par le navigateur.
+
 ## Solutions abandonnées à ne pas réintroduire sans nouvelle validation
 
 ### Import DWG/DXF dans l’application
 
-La chaîne LibreDWG puis DXF a été essayée entre les versions 0.4.1 et 0.4.3, puis supprimée en 0.5.0. Les problèmes observés concernaient les classes DWG instables, les définitions de blocs manquantes, les calques et la lisibilité des épaisseurs. La solution retenue est l’export PDF depuis AutoCAD avant import dans ARCenal DRAW.
+Une chaîne de conversion CAO intermédiaire a été essayée entre les versions 0.4.1 et 0.4.3, puis supprimée en 0.5.0. Les problèmes observés concernaient les classes de fichiers instables, les définitions de blocs manquantes, les calques et la lisibilité des épaisseurs. La solution retenue est l’export PDF depuis AutoCAD avant import dans ARCenal DRAW.
 
 ### Aplatissement systématique en image 600 DPI
 

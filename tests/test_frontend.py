@@ -24,6 +24,7 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("Format refusé. Utilisez un fichier PDF, PNG ou JPEG.", javascript)
         self.assertIn('id="plan-preview"', markup)
         self.assertIn("function fallbackToOriginalPdf()", javascript)
+        self.assertEqual(javascript.count("isEvalSupported: false, enableScripting: false"), 2)
 
     def test_import_hint_and_conversion_progress_are_visible(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
@@ -234,8 +235,12 @@ class FrontendTests(unittest.TestCase):
         self.assertNotIn("UNIVERSAL_PDF_DPI", javascript)
         self.assertNotIn("exportVectorPdf", javascript)
         self.assertIn("data-view-archive=", javascript)
-        self.assertIn(">Afficher</button>", javascript)
+        self.assertIn("archive.has_pdf ? 'Afficher' : 'Reprendre'", javascript)
         self.assertIn("archive.has_pdf", javascript)
+        self.assertIn("function saveExportSnapshot(exportName)", javascript)
+        self.assertNotIn("function archiveCurrentExport", javascript)
+        self.assertIn("Instantanés d’export", markup)
+        self.assertIn("Chaque export PDF enregistrera ici l’état du projet correspondant.", javascript)
         self.assertIn("/pdf`), '_blank'", javascript)
 
 

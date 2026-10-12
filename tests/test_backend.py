@@ -41,7 +41,26 @@ class BackendTest(unittest.TestCase):
             payload = json.loads(response_body or b"null")
         except (json.JSONDecodeError, UnicodeDecodeError):
             payload = response_body
+        self.last_headers = captured["headers"]
         return int(captured["status"].split()[0]), payload
+
+    def test_json_responses_are_not_cached_or_content_sniffed(self):
+        status, _ = self.call("GET", "/api/health")
+        self.assertEqual(status, 200)
+        self.assertEqual(self.last_headers["Cache-Control"], "no-store")
+        self.assertEqual(self.last_headers["X-Content-Type-Options"], "nosniff")
+
+    def test_json_body_must_be_an_object(self):
+        status, result = self.call("PUT", "/api/projects/project-invalid", [])
+        self.assertEqual(status, 400)
+        self.assertIn("objet", result["error"])
+
+        status, result = self.call(
+            "PUT", "/api/projects/project-invalid",
+            raw=b'{"name":"Plan","scale":NaN}',
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("non finie", result["error"])
 
     def test_project_archive_and_listing(self):
         state = {"name": "Plan test", "location": "Atelier", "circles": [], "interventions": []}
@@ -63,6 +82,18 @@ class BackendTest(unittest.TestCase):
         self.assertTrue(result["deleted"])
         status, _ = self.call("GET", "/api/archives/archive-1")
         self.assertEqual(status, 404)
+
+    def test_archive_rejects_invalid_state_and_project_identifier(self):
+        status, result = self.call("POST", "/api/archives", {"id": "bad-state", "state": ["invalid"]})
+        self.assertEqual(status, 400)
+        self.assertIn("instantané invalide", result["error"])
+
+        status, result = self.call(
+            "POST", "/api/archives",
+            {"id": "bad-project", "projectId": "../autre", "state": {}},
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("projet invalide", result["error"])
 
     def test_existing_pdf_archive_can_be_displayed_and_deleted(self):
         state = {"name": "Plan PDF", "circles": [], "interventions": []}
@@ -92,6 +123,20 @@ class BackendTest(unittest.TestCase):
         )
         self.assertEqual(status, 400)
         self.assertIn("Format", result["error"])
+
+    def test_failed_conversion_removes_temporary_upload(self):
+        upload_root = Path(os.environ["ARCENAL_UPLOAD_DIR"])
+        before = set(upload_root.iterdir()) if upload_root.exists() else set()
+        with mock.patch("backend.app.convert_upload", side_effect=RuntimeError("conversion failure")):
+            with self.assertLogs("arcenal_draw", level="ERROR"):
+                status, result = self.call(
+                    "POST", "/api/imports", raw=b"%PDF-1.7\ninvalid",
+                    headers={"HTTP_X_FILENAME": "echec.pdf"},
+                )
+        self.assertEqual(status, 500)
+        self.assertEqual(result["error"], "Erreur interne.")
+        after = set(upload_root.iterdir()) if upload_root.exists() else set()
+        self.assertEqual(after, before)
 
     def test_png_and_jpeg_uploads_keep_the_native_image(self):
         samples = (
@@ -142,6 +187,39 @@ class BackendTest(unittest.TestCase):
         self.assertEqual(status, 200)
         saved = next(item for item in listing["plans"] if item["id"] == plan["id"])
         self.assertEqual(saved["calibration"], calibration)
+
+    def test_invalid_calibration_numbers_are_rejected(self):
+        status, plan = self.call(
+            "POST", "/api/imports", raw=b"\x89PNG\r\n\x1a\n" + b"0" * 32,
+            headers={"HTTP_X_FILENAME": "calibrage.png"},
+        )
+        self.assertEqual(status, 201)
+        for factor in (True, float("inf"), 0, -1):
+            with self.subTest(factor=factor):
+                status, result = self.call(
+                    "PUT", f"/api/imports/{plan['id']}",
+                    {"calibration": {"metersPerNativeUnit": factor}},
+                )
+                self.assertEqual(status, 400)
+                self.assertTrue(
+                    "Calibrage invalide" in result["error"] or "non finie" in result["error"]
+                )
+
+    def test_import_files_are_isolated_between_users(self):
+        alice = {"HTTP_REMOTE_USER": "alice"}
+        bob = {"HTTP_REMOTE_USER": "bob"}
+        status, plan = self.call(
+            "POST", "/api/imports", raw=b"\x89PNG\r\n\x1a\n" + b"0" * 32,
+            headers={**alice, "HTTP_X_FILENAME": "confidentiel.png"},
+        )
+        self.assertEqual(status, 201)
+
+        for suffix in ("preview", "original"):
+            status, _ = self.call("GET", f"/api/imports/{plan['id']}/{suffix}", headers=bob)
+            self.assertEqual(status, 404)
+            status, content = self.call("GET", f"/api/imports/{plan['id']}/{suffix}", headers=alice)
+            self.assertEqual(status, 200)
+            self.assertTrue(content.startswith(b"\x89PNG"))
 
     def test_pdf_is_kept_native_and_supports_byte_ranges(self):
         content = b"%PDF-1.7\n" + b"0" * 128

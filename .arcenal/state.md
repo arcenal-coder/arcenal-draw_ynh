@@ -8,36 +8,38 @@ Statut : ACTUEL
 
 ## Version de référence
 
-- Application : `0.9.12~ynh1`.
-- Code fonctionnel : `e53725f`.
-- Documentation et historique : `c8e0b9d`.
+- Application : `0.9.13~ynh1`.
+- Code fonctionnel : non publié.
+- Documentation et historique : non publiés.
 
 ## Lot actif
 
-- Maintenance corrective et amélioration continue ; aucun développement n’est actuellement autorisé ou engagé.
+- Revue finale, nettoyage et durcissement avant production.
 
 ## Dernière étape validée
 
-- Interface responsive renforcée, identité ONYX intégrée et historique complet des versions publié.
+- Fonction d’archive renommée « Instantanés d’export » conformément à son comportement réel.
 
 ## Tests exécutés
 
-- VALIDÉ : 44 tests automatisés réussis pour la version `0.9.12~ynh1`.
-- VALIDÉ : workflow GitHub du paquet YunoHost réussi.
-- VALIDÉ : catalogue ARCenal mis à jour vers `0.9.12~ynh1`.
+- VALIDÉ : 51 tests automatisés locaux réussis pour la version `0.9.13~ynh1`.
+- VALIDÉ : syntaxes Python, JavaScript et Bash, puis contrôle des différences Git.
+- VALIDÉ : aucune référence textuelle ou aucun chemin portant le nom du composant supprimé ne subsiste dans les fichiers suivis.
+- VALIDÉ : scripts du paquet acceptés par le linter officiel YunoHost ; contrôles du catalogue public non applicables au catalogue privé ARCenal.
+- NON EXÉCUTÉ : cycle de vie réel sur une instance YunoHost/Incus isolée.
 
 ## Décisions structurantes
 
 - Formats importés : PDF, PNG et JPEG uniquement.
-- DWG/DXF et LibreDWG abandonnés.
+- Les formats CAO natifs ne font pas partie du périmètre de l’application.
 - Export PDF WYSIWYG restauré depuis la version `0.9.9`.
 - Les défauts de caractères déjà présents dans le PDF source doivent être corrigés lors de l’export AutoCAD.
 
 ## Blocages
 
-- Aucun connu.
+- La recette installation, mise à niveau, sauvegarde/restauration et suppression reste à exécuter sur une instance YunoHost isolée.
 - Le dossier non suivi `ARCenal_Dev-Harness/` est conservé sans modification et ne fait pas partie de l’application.
 
 ## Prochaine action
 
-- Attendre le prochain besoin client, puis formaliser un seul lot court avant toute modification.
+- Exécuter la recette complète sur une instance YunoHost isolée avant d’autoriser la publication de production.

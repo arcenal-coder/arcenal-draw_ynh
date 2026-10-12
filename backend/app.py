@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import os
 import pathlib
 import re
@@ -20,7 +21,12 @@ LOGGER = logging.getLogger("arcenal_draw")
 
 def response(start_response, status, payload=None, headers=None):
     body = b"" if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    response_headers = [("Content-Type", "application/json; charset=utf-8"), ("Content-Length", str(len(body)))]
+    response_headers = [
+        ("Content-Type", "application/json; charset=utf-8"),
+        ("Content-Length", str(len(body))),
+        ("Cache-Control", "no-store"),
+        ("X-Content-Type-Options", "nosniff"),
+    ]
     response_headers.extend(headers or [])
     start_response(f"{status.value} {status.phrase}", response_headers)
     return [body]
@@ -48,6 +54,8 @@ def file_response(environ, start_response, path, media_type):
     ]
     if status.startswith("206"):
         headers.append(("Content-Range", f"bytes {start}-{end}/{size}"))
+    if media_type == "image/svg+xml":
+        headers.append(("Content-Security-Policy", "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'"))
     start_response(status, headers)
     def chunks():
         with path.open("rb") as source:
@@ -69,7 +77,16 @@ def read_json(environ):
         raise ValueError("Longueur invalide.") from error
     if length < 1 or length > MAX_JSON_BYTES:
         raise ValueError("Corps JSON vide ou trop volumineux.")
-    return json.loads(environ["wsgi.input"].read(length).decode("utf-8"))
+    def reject_non_finite(value):
+        raise ValueError(f"Valeur JSON non finie interdite : {value}.")
+
+    payload = json.loads(
+        environ["wsgi.input"].read(length).decode("utf-8"),
+        parse_constant=reject_non_finite,
+    )
+    if not isinstance(payload, dict):
+        raise ValueError("Le corps JSON doit être un objet.")
+    return payload
 
 
 def current_user(environ):
@@ -125,8 +142,14 @@ def route(environ, start_response):
         data = read_json(environ)
         archive_id = str(data.get("id") or uuid.uuid4().hex)
         if not ID_PATTERN.fullmatch(archive_id):
-            raise ValueError("Identifiant d’archive invalide.")
-        db.save_archive(owner, archive_id, data.get("projectId"), data.get("exportName") or "Export PDF", data.get("state") or {})
+            raise ValueError("Identifiant d’instantané invalide.")
+        project_id = data.get("projectId")
+        if project_id is not None and (not isinstance(project_id, str) or not ID_PATTERN.fullmatch(project_id)):
+            raise ValueError("Identifiant de projet invalide.")
+        state = data.get("state") or {}
+        if not isinstance(state, dict):
+            raise ValueError("État d’instantané invalide.")
+        db.save_archive(owner, archive_id, project_id, data.get("exportName") or "Instantané d’export", state)
         return response(start_response, HTTPStatus.CREATED, {"id": archive_id})
 
     archive_pdf_match = re.fullmatch(r"/api/archives/([^/]+)/pdf", path)
@@ -140,7 +163,7 @@ def route(environ, start_response):
                 return response(start_response, HTTPStatus.NOT_FOUND, {"error": "PDF archivé introuvable."})
             return file_response(environ, start_response, pathlib.Path(pdf_path), "application/pdf")
         if not db.get_archive(owner, archive_id):
-            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Archive introuvable."})
+            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Instantané introuvable."})
         try:
             length = int(environ.get("CONTENT_LENGTH") or 0)
         except ValueError as error:
@@ -180,7 +203,7 @@ def route(environ, start_response):
                 pathlib.Path(pdf_path).unlink(missing_ok=True)
             return response(start_response, HTTPStatus.OK, {"deleted": True}) if deleted else response(start_response, HTTPStatus.NOT_FOUND, {"error": "Archive introuvable."})
         archive = db.get_archive(owner, archive_id)
-        return response(start_response, HTTPStatus.OK, archive) if archive else response(start_response, HTTPStatus.NOT_FOUND, {"error": "Archive introuvable."})
+        return response(start_response, HTTPStatus.OK, archive) if archive else response(start_response, HTTPStatus.NOT_FOUND, {"error": "Instantané introuvable."})
 
     if path == "/api/imports" and method == "GET":
         return response(start_response, HTTPStatus.OK, {"plans": db.list_plan_files(owner)})
@@ -192,9 +215,13 @@ def route(environ, start_response):
         except ValueError as error:
             raise ImportErrorSafe("Longueur de fichier invalide.") from error
         upload = store_upload(environ["wsgi.input"], filename, length)
-        converted = convert_upload(upload)
-        db.save_plan_file(owner, converted)
-        public = {key: value for key, value in converted.items() if key not in {"path", "convertedPath"}}
+        try:
+            converted = convert_upload(upload)
+            db.save_plan_file(owner, converted)
+        except Exception:
+            delete_import(upload["id"])
+            raise
+        public = {key: value for key, value in converted.items() if key != "path"}
         return response(start_response, HTTPStatus.CREATED, public)
 
     import_match = re.fullmatch(r"/api/imports/([a-fA-F0-9]{32})", path)
@@ -203,8 +230,10 @@ def route(environ, start_response):
         if method == "PUT":
             data = read_json(environ)
             calibration = data.get("calibration") or {}
+            if not isinstance(calibration, dict):
+                raise ValueError("Calibrage invalide.")
             factor = calibration.get("metersPerNativeUnit")
-            if not isinstance(factor, (int, float)) or factor <= 0:
+            if isinstance(factor, bool) or not isinstance(factor, (int, float)) or not math.isfinite(factor) or factor <= 0:
                 raise ValueError("Calibrage invalide.")
             if not db.save_plan_calibration(owner, upload_id, calibration):
                 return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Plan introuvable."})
@@ -216,16 +245,22 @@ def route(environ, start_response):
 
     preview_match = re.fullmatch(r"/api/imports/([a-fA-F0-9]{32})/preview", path)
     if preview_match and method == "GET":
+        upload_id = preview_match.group(1)
+        if not db.has_plan_file(owner, upload_id):
+            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Aperçu introuvable."})
         try:
-            preview, media_type = preview_file(preview_match.group(1))
+            preview, media_type = preview_file(upload_id)
         except FileNotFoundError:
             return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Aperçu introuvable."})
         return file_response(environ, start_response, preview, media_type)
 
     original_match = re.fullmatch(r"/api/imports/([a-fA-F0-9]{32})/original", path)
     if original_match and method == "GET":
+        upload_id = original_match.group(1)
+        if not db.has_plan_file(owner, upload_id):
+            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Original introuvable."})
         try:
-            original, media_type = original_file(original_match.group(1))
+            original, media_type = original_file(upload_id)
         except FileNotFoundError:
             return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Original introuvable."})
         return file_response(environ, start_response, original, media_type)
