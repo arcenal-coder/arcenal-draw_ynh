@@ -9,16 +9,16 @@ Statut : ACTUEL
 ## Version de référence
 
 - Application : `0.9.13~ynh1`.
-- Code fonctionnel : non publié.
-- Documentation et historique : non publiés.
+- Code fonctionnel publié : `5bd19b5ecdf70f046c20fd8764f12ae59755229a`.
+- Catalogues ARCenal `development` et `preview` publiés : `20b226ef1c5f559940e5a995a0371037d1f690f6`.
 
 ## Lot actif
 
-- Revue finale, nettoyage et durcissement avant production.
+- Mise à jour YunoHost et recette finale de la version `0.9.13~ynh1`.
 
 ## Dernière étape validée
 
-- Fonction d’archive renommée « Instantanés d’export » conformément à son comportement réel.
+- Application et catalogues ARCenal `development` et `preview` publiés sur GitHub.
 
 ## Tests exécutés
 
@@ -42,4 +42,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Exécuter la recette complète sur une instance YunoHost isolée avant d’autoriser la publication de production.
+- Mettre ARCenal DRAW à jour depuis l’interface YunoHost, puis vérifier l’ouverture, l’import d’un plan, la reprise d’un projet et l’export PDF.
