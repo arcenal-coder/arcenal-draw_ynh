@@ -217,7 +217,16 @@ class FrontendTests(unittest.TestCase):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         self.assertIn("function titleBlockFont(size)", javascript)
         self.assertIn("size * 1.2", javascript)
-        self.assertIn('font-size="${titleBlockFont(2.85)}"', javascript)
+        self.assertIn('font-size="${titleBlockFont(2.25)}"', javascript)
+
+    def test_title_block_header_keeps_logo_and_title_separate(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("const titleHeader", javascript)
+        self.assertIn('x1="20.5"', javascript)
+        self.assertIn('transform="translate(23 0)"', javascript)
+        self.assertIn('>PLAN DE CONTRÔLE</text>', javascript)
+        self.assertIn('>GAMMAGRAPHIQUE</text>', javascript)
+        self.assertNotIn('PLAN DE CONTRÔLE GAMMAGRAPHIQUE</text>', javascript)
 
     def test_onyx_brand_and_responsive_forms_are_integrated(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
@@ -233,7 +242,7 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("grid-template-columns:minmax(120px,1fr) minmax(76px,88px)", stylesheet)
         self.assertIn("Outil de conception de plans d’impact radiologique", markup)
         self.assertNotIn("PREUVE DE CONCEPT", markup)
-        self.assertIn('dominant-baseline="middle"', javascript)
+        self.assertIn('const titleHeader', javascript)
 
     def test_pdf_export_prints_the_visible_sheet_without_substitution(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")

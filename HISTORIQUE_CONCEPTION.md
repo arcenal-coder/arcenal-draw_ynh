@@ -1,7 +1,7 @@
 # ARCenal DRAW — Historique de conception et des versions
 
 Dernière mise à jour : 15 octobre 2026
-Version courante au moment de la rédaction : `0.9.14~ynh1`
+Version courante au moment de la rédaction : `0.9.15~ynh1`
 Dépôt : <https://github.com/arcenal-coder/arcenal-draw_ynh>
 
 ## Objet du document
@@ -370,6 +370,13 @@ Le prototype initial a défini les fonctions métier suivantes avant la créatio
 - Recalcul immédiat du rayon pour les seuils 2,5 µSv/h, 25 µSv/1 h et le réglage manuel.
 - Conservation du réglage d’atténuation lors du recalcul radiologique.
 - Augmentation de 20 % de toutes les polices du cartouche final.
+
+#### `0.9.15~ynh1` — 15 octobre 2026
+
+- Correction du chevauchement entre le logo ONYX et le titre du cartouche.
+- Réservation d’une zone distincte pour le logo, séparée visuellement du titre.
+- Répartition de « PLAN DE CONTRÔLE GAMMAGRAPHIQUE » sur deux lignes afin de préserver sa lisibilité sur les écrans et dans les exports PDF.
+- Ajout d’un test de non-régression dédié à la composition de l’en-tête.
 
 ## Solutions abandonnées à ne pas réintroduire sans nouvelle validation
 

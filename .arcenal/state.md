@@ -8,22 +8,21 @@ Statut : ACTUEL
 
 ## Version de référence
 
-- Application publiée : `0.9.14~ynh1`.
-- Code fonctionnel publié : `b63398c3761d094f5ca97762fcf9be681b41b54b`.
-- Catalogues ARCenal `development`, `preview` et `stable` publiés : `1d00f6e1caeb3e6988b5d1a1d1741edfcd52943c`.
+- Application en préparation : `0.9.15~ynh1`.
+- Dernier code fonctionnel publié : `b63398c3761d094f5ca97762fcf9be681b41b54b` (`0.9.14~ynh1`).
+- Derniers catalogues ARCenal `development`, `preview` et `stable` publiés : `1d00f6e1caeb3e6988b5d1a1d1741edfcd52943c` (`0.9.14~ynh1`).
 
 ## Lot actif
 
-- Mise à jour YunoHost vers la version stable `0.9.14~ynh1` et recette finale.
+- Publication stable de la correction de lisibilité du cartouche en `0.9.15~ynh1`.
 
 ## Dernière étape validée
 
-- Version `0.9.14~ynh1` publiée sur GitHub et diffusée dans les trois canaux du Store ARCenal.
-- Workflows de vérification et de publication du catalogue terminés avec succès.
+- En-tête du cartouche recomposé avec des zones séparées pour le logo ONYX et le titre sur deux lignes.
 
 ## Tests exécutés
 
-- VALIDÉ : 53 tests automatisés locaux réussis pour la version `0.9.14~ynh1`.
+- VALIDÉ : 54 tests automatisés locaux réussis pour la version `0.9.15~ynh1`.
 - VALIDÉ : syntaxes Python, JavaScript et Bash, puis contrôle des différences Git.
 - VALIDÉ : aucune référence textuelle ou aucun chemin portant le nom du composant supprimé ne subsiste dans les fichiers suivis.
 - VALIDÉ : scripts du paquet acceptés par le linter officiel YunoHost ; contrôles du catalogue public non applicables au catalogue privé ARCenal.
@@ -45,4 +44,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Mettre à jour ARCenal DRAW depuis l'administration YunoHost, puis vérifier le changement de balisage et la lisibilité du cartouche.
+- Publier `0.9.15~ynh1` sur GitHub et dans les trois canaux du Store ARCenal après validation finale.
