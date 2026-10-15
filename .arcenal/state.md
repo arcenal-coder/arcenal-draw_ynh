@@ -8,17 +8,18 @@ Statut : ACTUEL
 
 ## Version de référence
 
-- Application en préparation : `0.9.14~ynh1`.
-- Code fonctionnel publié : `5bd19b5ecdf70f046c20fd8764f12ae59755229a`.
-- Catalogues ARCenal `development` et `preview` publiés : `20b226ef1c5f559940e5a995a0371037d1f690f6`.
+- Application publiée : `0.9.14~ynh1`.
+- Code fonctionnel publié : `b63398c3761d094f5ca97762fcf9be681b41b54b`.
+- Catalogues ARCenal `development`, `preview` et `stable` publiés : `1d00f6e1caeb3e6988b5d1a1d1741edfcd52943c`.
 
 ## Lot actif
 
-- Correction du changement de balisage après dépôt et amélioration de la lisibilité du cartouche.
+- Mise à jour YunoHost vers la version stable `0.9.14~ynh1` et recette finale.
 
 ## Dernière étape validée
 
-- Changement de seuil disponible pour une sélection simple ou fusionnée et police du cartouche augmentée de 20 %.
+- Version `0.9.14~ynh1` publiée sur GitHub et diffusée dans les trois canaux du Store ARCenal.
+- Workflows de vérification et de publication du catalogue terminés avec succès.
 
 ## Tests exécutés
 
@@ -26,6 +27,8 @@ Statut : ACTUEL
 - VALIDÉ : syntaxes Python, JavaScript et Bash, puis contrôle des différences Git.
 - VALIDÉ : aucune référence textuelle ou aucun chemin portant le nom du composant supprimé ne subsiste dans les fichiers suivis.
 - VALIDÉ : scripts du paquet acceptés par le linter officiel YunoHost ; contrôles du catalogue public non applicables au catalogue privé ARCenal.
+- VALIDÉ : 16 tests automatisés du catalogue ARCenal réussis avant publication.
+- VALIDÉ : workflows GitHub de vérification et de publication du Store réussis.
 - NON EXÉCUTÉ : cycle de vie réel sur une instance YunoHost/Incus isolée.
 
 ## Décisions structurantes
@@ -42,4 +45,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Vérifier visuellement le cartouche et le changement de balisage, puis préparer la publication de `0.9.14~ynh1` après confirmation humaine.
+- Mettre à jour ARCenal DRAW depuis l'administration YunoHost, puis vérifier le changement de balisage et la lisibilité du cartouche.
