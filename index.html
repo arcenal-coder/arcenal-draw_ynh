@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>ARCenal DRAW</title>
-    <link rel="stylesheet" href="styles.css?v=0.9.13" />
+    <link rel="stylesheet" href="styles.css?v=0.9.14" />
     <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
   </head>
   <body>
@@ -111,6 +111,11 @@
           <section id="selection-panel" class="panel tool-panel">
             <p class="eyebrow">SÉLECTION</p><h2>Zones de balisage</h2><p id="selection-message">Cliquez sur les cercles pour les sélectionner.</p>
             <label id="reassign-zone-row" hidden>Attribuer à une société / équipe<select id="reassign-intervention"></select></label>
+            <div id="selection-balisage-settings" hidden>
+              <label>Type de balisage<select id="selection-threshold"><option value="" hidden>Valeurs différentes</option><option value="2.5">2,5 µSv/h</option><option value="25">25 µSv sur 1 h</option><option value="manual">Réglage manuel</option></select></label>
+              <label id="selection-manual-radius-row" hidden>Rayon demandé, en mètres<input id="selection-manual-radius" type="number" min="0.1" step="0.1" value="20" /></label>
+              <label class="check-row" id="selection-attenuation-row"><input id="selection-attenuation" type="checkbox" /> Atténuation 1/250</label>
+            </div>
             <button class="wide-action" id="merge-button" disabled hidden>Fusionner les zones</button><button class="wide-action secondary-action" id="split-button" disabled hidden>Dissocier les zones</button>
           </section>
           <section id="signal-panel" class="panel tool-panel" hidden>
@@ -172,6 +177,6 @@
         <div class="dialog-actions"><button type="button" class="primary" id="start-calibration">Calibrer</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=0.9.13"></script>
+    <script src="app.js?v=0.9.14"></script>
   </body>
 </html>

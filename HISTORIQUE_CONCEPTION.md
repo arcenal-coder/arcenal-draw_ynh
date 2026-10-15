@@ -1,7 +1,7 @@
 # ARCenal DRAW — Historique de conception et des versions
 
-Dernière mise à jour : 12 octobre 2026
-Version courante au moment de la rédaction : `0.9.13~ynh1`
+Dernière mise à jour : 15 octobre 2026
+Version courante au moment de la rédaction : `0.9.14~ynh1`
 Dépôt : <https://github.com/arcenal-coder/arcenal-draw_ynh>
 
 ## Objet du document
@@ -363,6 +363,13 @@ Le prototype initial a défini les fonctions métier suivantes avant la créatio
 - Durcissement de Nginx, PDF.js et du service systemd.
 - Accès initial réservé aux utilisateurs authentifiés et passage de la suite à 51 tests.
 - Renommage de la bibliothèque en « Instantanés d’export » : elle conserve l’état réouvrable du projet et ne prétend plus archiver le PDF imprimé par le navigateur.
+
+#### `0.9.14~ynh1` — 15 octobre 2026
+
+- Modification du type de balisage après dépôt pour les points simples et les zones fusionnées.
+- Recalcul immédiat du rayon pour les seuils 2,5 µSv/h, 25 µSv/1 h et le réglage manuel.
+- Conservation du réglage d’atténuation lors du recalcul radiologique.
+- Augmentation de 20 % de toutes les polices du cartouche final.
 
 ## Solutions abandonnées à ne pas réintroduire sans nouvelle validation
 

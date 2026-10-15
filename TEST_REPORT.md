@@ -1,6 +1,6 @@
-# Rapport de validation — ARCenal DRAW 0.9.13~ynh1
+# Rapport de validation — ARCenal DRAW 0.9.14~ynh1
 
-Date : 12 octobre 2026
+Date : 15 octobre 2026
 
 ## Contrôles locaux
 
@@ -9,7 +9,7 @@ Date : 12 octobre 2026
 | Compilation Python | RÉUSSI | `python3 -m py_compile backend/*.py` |
 | Syntaxe JavaScript | RÉUSSI | `node --check app.js` avec Node.js 24.19.0 |
 | Syntaxe Bash | RÉUSSI | `bash -n scripts/*` |
-| Tests automatisés | RÉUSSI | 51 tests réussis |
+| Tests automatisés | RÉUSSI | 53 tests réussis |
 | Propreté du diff | RÉUSSI | `git diff --check` sans erreur |
 | Recherche de secrets | RÉUSSI DANS LE PÉRIMÈTRE | aucun secret détecté dans le code applicatif et les configurations ; les occurrences `password` de PDF.js sont des noms internes de la bibliothèque |
 | Références au composant CAO retiré | RÉUSSI | aucune occurrence textuelle ou aucun chemin suivi restant |

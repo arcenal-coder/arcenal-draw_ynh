@@ -98,7 +98,8 @@ Lorsque plusieurs zones radiologiques sont fusionnées, leurs surbalisages sont 
 - Les équipements placés sont sélectionnables, enregistrés et supprimables.
 - La corbeille de la barre d'outils supprime un cercle, une zone fusionnée complète ou un équipement sélectionné.
 - Les touches Retour arrière et Supprimer exécutent la même suppression lorsque aucun champ n'est en cours de saisie.
-- Un point d'impact ou une zone sélectionnée peut être réattribué à une autre société/équipe ; sa couleur et son calcul sont alors actualisés depuis le cartouche.
+- Un point d'impact ou une zone fusionnée sélectionnée peut être réattribué à une autre société/équipe ; sa couleur et son calcul sont alors actualisés depuis le cartouche.
+- Le type de balisage d'une sélection simple ou fusionnée peut être remplacé après dépôt par 2,5 µSv/h, 25 µSv/1 h ou une distance manuelle. Tous les rayons concernés sont recalculés immédiatement sans dissocier la zone.
 - Les actions « Fusionner » et « Dissocier » restent masquées tant que la sélection courante ne permet pas réellement de les utiliser.
 
 ## Sauvegarde et export

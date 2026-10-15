@@ -704,9 +704,13 @@ function niceScaleSegment(rawValue) {
   return nice * (10 ** exponent);
 }
 
+function titleBlockFont(size) {
+  return Number((size * 1.2).toFixed(2));
+}
+
 function personRowMarkup(label, person, y, width) {
-  const signature = person.signature?.dataUrl ? `<image href="${person.signature.dataUrl}" x="55" y="1" width="24" height="12" preserveAspectRatio="xMidYMid meet"/>` : person.signature?.type === 'application/pdf' ? '<text x="67" y="8" text-anchor="middle" font-size="2.1">SIGNATURE PDF</text>' : '';
-  return `<g transform="translate(0 ${y})"><rect width="${width}" height="15" fill="#fff" stroke="#17212b" stroke-width=".32"/><text x="3" y="5" font-size="2.45" font-weight="700">${label} : ${escapeText(person.name || '—')}</text><text x="3" y="10" font-size="2.25">Fonction : ${escapeText(person.role || '—')}</text>${signature}</g>`;
+  const signature = person.signature?.dataUrl ? `<image href="${person.signature.dataUrl}" x="55" y="1" width="24" height="12" preserveAspectRatio="xMidYMid meet"/>` : person.signature?.type === 'application/pdf' ? `<text x="67" y="8" text-anchor="middle" font-size="${titleBlockFont(2.1)}">SIGNATURE PDF</text>` : '';
+  return `<g transform="translate(0 ${y})"><rect width="${width}" height="15" fill="#fff" stroke="#17212b" stroke-width=".32"/><text x="3" y="5" font-size="${titleBlockFont(2.45)}" font-weight="700">${label} : ${escapeText(person.name || '—')}</text><text x="3" y="10" font-size="${titleBlockFont(2.25)}">Fonction : ${escapeText(person.role || '—')}</text>${signature}</g>`;
 }
 
 function circleIsVisible(circle) {
@@ -757,15 +761,15 @@ function renderTitleBlock() {
     const compact = rowHeight < 24;
     const positions = compact ? { company: 4.2, time: 7.7, source: 11.2, marking: item.overEnabled ? 14.8 : rowHeight - 2.5, over: rowHeight - 1.1 } : { company: 5.5, time: 9.7, source: 13.8, marking: 18.2, over: 24.8 };
     const font = compact ? 1.85 : 2.25;
-    const overMarkup = item.overEnabled ? `<line x1="10" y1="${positions.over - .7}" x2="15" y2="${positions.over - .7}" stroke="${item.overColor}" stroke-width="${Math.max(0.3, Math.min(1.4, Number(item.overWidth) || 1.2))}" ${item.overStyle === 'dashed' ? 'stroke-dasharray="1.2 .8"' : ''}/><text x="17" y="${positions.over}" font-size="${compact ? 1.7 : 2.1}">Surbalisage de sécurité : ${formatDistance(Number(item.overDistance))}</text>` : '';
-    return `<g transform="translate(0 ${y})"><rect width="${width}" height="${rowHeight}" fill="#fff" stroke="#26353e" stroke-width=".32"/><rect x="2.5" y="2" width="5" height="${Math.max(4, rowHeight - 4)}" rx=".6" fill="${item.color}"/><text x="10" y="${positions.company}" font-size="${compact ? 2.1 : 2.7}" font-weight="700">${escapeText(item.company)}</text><text x="10" y="${positions.time}" font-size="${font}">Tirs : ${formatTime(item.scheduleStart)} → ${formatTime(item.scheduleEnd)}</text><text x="10" y="${positions.source}" font-size="${font}">${item.isotope} · ${Number(item.activity).toLocaleString('fr-FR')} ${item.unit} · ${attenuated ? 'att. 1/250' : 'sans att.'}</text><text x="10" y="${positions.marking}" font-size="${font}" font-weight="700">${thresholdLabel} : ${formatDistance(distance)}</text>${overMarkup}</g>`;
+    const overMarkup = item.overEnabled ? `<line x1="10" y1="${positions.over - .7}" x2="15" y2="${positions.over - .7}" stroke="${item.overColor}" stroke-width="${Math.max(0.3, Math.min(1.4, Number(item.overWidth) || 1.2))}" ${item.overStyle === 'dashed' ? 'stroke-dasharray="1.2 .8"' : ''}/><text x="17" y="${positions.over}" font-size="${titleBlockFont(compact ? 1.7 : 2.1)}">Surbalisage de sécurité : ${formatDistance(Number(item.overDistance))}</text>` : '';
+    return `<g transform="translate(0 ${y})"><rect width="${width}" height="${rowHeight}" fill="#fff" stroke="#26353e" stroke-width=".32"/><rect x="2.5" y="2" width="5" height="${Math.max(4, rowHeight - 4)}" rx=".6" fill="${item.color}"/><text x="10" y="${positions.company}" font-size="${titleBlockFont(compact ? 2.1 : 2.7)}" font-weight="700">${escapeText(item.company)}</text><text x="10" y="${positions.time}" font-size="${titleBlockFont(font)}">Tirs : ${formatTime(item.scheduleStart)} → ${formatTime(item.scheduleEnd)}</text><text x="10" y="${positions.source}" font-size="${titleBlockFont(font)}">${item.isotope} · ${Number(item.activity).toLocaleString('fr-FR')} ${item.unit} · ${attenuated ? 'att. 1/250' : 'sans att.'}</text><text x="10" y="${positions.marking}" font-size="${titleBlockFont(font)}" font-weight="700">${thresholdLabel} : ${formatDistance(distance)}</text>${overMarkup}</g>`;
   }).join('');
   const bars = Array.from({ length: 4 }, (_, index) => `<rect x="${index * segmentWidth}" width="${segmentWidth}" height="3.5" fill="${index % 2 ? '#fff' : '#17212b'}" stroke="#17212b" stroke-width=".3"/>`).join('');
   const peopleY = headerHeight + rowHeight * count + footerHeight;
   const peopleRows = personRowMarkup('Réalisé par', state.author, peopleY, width) + (state.validatorEnabled ? personRowMarkup('Validé par', state.validator, peopleY + 15, width) : '');
   const clientLabel = escapeText(state.client || 'CLIENT');
-  const logoMarkup = state.logo?.dataUrl ? `<g transform="translate(0 -19)"><image href="${state.logo.dataUrl}" x="0" y="0" width="24" height="16" preserveAspectRatio="xMinYMid meet"/><text x="28" y="10" font-size="3.4" font-weight="700">${clientLabel}</text></g>` : state.logo?.type === 'application/pdf' ? `<g transform="translate(0 -19)"><text x="0" y="7" font-size="2.4" font-weight="700">LOGO PDF</text><text x="28" y="7" font-size="3.4" font-weight="700">${clientLabel}</text></g>` : state.client ? `<text x="0" y="-7" font-size="3.4" font-weight="700">${clientLabel}</text>` : '';
-  titleBlock.innerHTML = `${logoMarkup}<rect width="${width}" height="${height}" fill="#fff" stroke="#17212b" stroke-width=".65"/><rect width="${width}" height="13" fill="#edf1f3" stroke="#17212b" stroke-width=".65"/><path d="M0 22H${width}M0 31H${width}" stroke="#17212b" stroke-width=".32"/><g transform="translate(2.2 2.5)"><image href="assets/onyx-logo.png" x="0" y="0" width="18.5" height="7" preserveAspectRatio="xMinYMid meet"/><text x="49.3" y="3.5" dominant-baseline="middle" text-anchor="middle" font-size="2.85" font-weight="700">PLAN DE CONTRÔLE GAMMAGRAPHIQUE</text></g><text x="3" y="19" font-size="2.6">Date : ${displayDate}</text><text x="3" y="28" font-size="2.6">Localisation : ${escapeText(state.location || '—')}</text>${rows}<g transform="translate(3 ${headerHeight + rowHeight * count + 4})"><text x="0" y="-1.2" font-size="2.35">Échelle graphique — mètres</text>${bars}<text x="0" y="8" font-size="2.2">0</text><text x="${scaleTotal / 2 - 2}" y="8" font-size="2.2">${segmentMeters * 2}</text><text x="${scaleTotal - 2}" y="8" font-size="2.2">${segmentMeters * 4} m</text></g>${peopleRows}`;
+  const logoMarkup = state.logo?.dataUrl ? `<g transform="translate(0 -19)"><image href="${state.logo.dataUrl}" x="0" y="0" width="24" height="16" preserveAspectRatio="xMinYMid meet"/><text x="28" y="10" font-size="${titleBlockFont(3.4)}" font-weight="700">${clientLabel}</text></g>` : state.logo?.type === 'application/pdf' ? `<g transform="translate(0 -19)"><text x="0" y="7" font-size="${titleBlockFont(2.4)}" font-weight="700">LOGO PDF</text><text x="28" y="7" font-size="${titleBlockFont(3.4)}" font-weight="700">${clientLabel}</text></g>` : state.client ? `<text x="0" y="-7" font-size="${titleBlockFont(3.4)}" font-weight="700">${clientLabel}</text>` : '';
+  titleBlock.innerHTML = `${logoMarkup}<rect width="${width}" height="${height}" fill="#fff" stroke="#17212b" stroke-width=".65"/><rect width="${width}" height="13" fill="#edf1f3" stroke="#17212b" stroke-width=".65"/><path d="M0 22H${width}M0 31H${width}" stroke="#17212b" stroke-width=".32"/><g transform="translate(2.2 2.5)"><image href="assets/onyx-logo.png" x="0" y="0" width="18.5" height="7" preserveAspectRatio="xMinYMid meet"/><text x="49.3" y="3.5" dominant-baseline="middle" text-anchor="middle" font-size="${titleBlockFont(2.85)}" font-weight="700">PLAN DE CONTRÔLE GAMMAGRAPHIQUE</text></g><text x="3" y="19" font-size="${titleBlockFont(2.6)}">Date : ${displayDate}</text><text x="3" y="28" font-size="${titleBlockFont(2.6)}">Localisation : ${escapeText(state.location || '—')}</text>${rows}<g transform="translate(3 ${headerHeight + rowHeight * count + 4})"><text x="0" y="-1.2" font-size="${titleBlockFont(2.35)}">Échelle graphique — mètres</text>${bars}<text x="0" y="8" font-size="${titleBlockFont(2.2)}">0</text><text x="${scaleTotal / 2 - 2}" y="8" font-size="${titleBlockFont(2.2)}">${segmentMeters * 2}</text><text x="${scaleTotal - 2}" y="8" font-size="${titleBlockFont(2.2)}">${segmentMeters * 4} m</text></g>${peopleRows}`;
 }
 
 function renderCountPicker() {
@@ -1041,6 +1045,12 @@ function selectOverzone(event) {
   renderZones();
 }
 
+function selectedZoneCircleIds() {
+  const ids = new Set(selectedCircleIds);
+  state.merges.filter((merge) => selectedMergeIds.has(merge.id)).forEach((merge) => merge.circleIds.forEach((id) => ids.add(id)));
+  return ids;
+}
+
 function updateSelectionPanel(message = '') {
   const count = selectedCircleIds.size;
   const mergeCount = selectedMergeIds.size;
@@ -1062,14 +1072,63 @@ function updateSelectionPanel(message = '') {
   document.querySelector('#delete-selection').disabled = count + mergeCount + signalCount + overzoneCount + measurementCount === 0;
   const assignmentRow = document.querySelector('#reassign-zone-row');
   assignmentRow.hidden = count + mergeCount === 0;
+  const selectedIds = selectedZoneCircleIds();
   if (!assignmentRow.hidden) {
-    const selectedIds = new Set([...selectedCircleIds]);
-    state.merges.filter((merge) => selectedMergeIds.has(merge.id)).flatMap((merge) => merge.circleIds).forEach((id) => selectedIds.add(id));
     const currentIds = new Set([...selectedIds].map((id) => circleById(id)?.interventionId).filter(Boolean));
     const select = document.querySelector('#reassign-intervention');
     select.innerHTML = state.interventions.map((item) => `<option value="${item.id}">${escapeText(item.company)}</option>`).join('');
     if (currentIds.size === 1) select.value = [...currentIds][0];
   }
+  const balisageSettings = document.querySelector('#selection-balisage-settings');
+  balisageSettings.hidden = selectedIds.size === 0;
+  if (!balisageSettings.hidden) {
+    const circles = [...selectedIds].map(circleById).filter(Boolean);
+    const thresholds = new Set(circles.map((circle) => String(circle.threshold)));
+    const thresholdSelect = document.querySelector('#selection-threshold');
+    thresholdSelect.value = thresholds.size === 1 ? [...thresholds][0] : '';
+    const manual = thresholds.size === 1 && thresholdSelect.value === 'manual';
+    const manualRow = document.querySelector('#selection-manual-radius-row');
+    manualRow.hidden = !manual;
+    if (manual) {
+      const distances = new Set(circles.map((circle) => Number(circle.manualDistance ?? circle.radius)));
+      if (distances.size === 1) document.querySelector('#selection-manual-radius').value = [...distances][0];
+    }
+    const attenuationRow = document.querySelector('#selection-attenuation-row');
+    attenuationRow.hidden = manual || thresholds.size !== 1;
+    const attenuation = document.querySelector('#selection-attenuation');
+    attenuation.checked = circles.every((circle) => circle.attenuated);
+    attenuation.indeterminate = !attenuation.checked && circles.some((circle) => circle.attenuated);
+  }
+}
+
+function applySelectedBalisage() {
+  const selectedIds = selectedZoneCircleIds();
+  const thresholdValue = document.querySelector('#selection-threshold').value;
+  if (!selectedIds.size || !thresholdValue) return;
+  const circles = [...selectedIds].map(circleById).filter(Boolean);
+  const threshold = thresholdValue === 'manual' ? 'manual' : Number(thresholdValue);
+  const manualRadius = Math.max(0.1, Number(document.querySelector('#selection-manual-radius').value) || 0.1);
+  const currentThresholds = new Set(circles.map((circle) => String(circle.threshold)));
+  const useInterventionAttenuation = currentThresholds.size !== 1 || currentThresholds.has('manual');
+  const selectedAttenuation = document.querySelector('#selection-attenuation').checked;
+  const interventionIds = new Set();
+  circles.forEach((circle) => {
+    const intervention = state.interventions.find((item) => item.id === circle.interventionId);
+    if (!intervention) return;
+    const attenuated = useInterventionAttenuation ? intervention.attenuation : selectedAttenuation;
+    interventionIds.add(intervention.id);
+    circle.threshold = threshold;
+    circle.attenuated = threshold === 'manual' ? false : attenuated;
+    circle.manualDistance = threshold === 'manual' ? manualRadius : null;
+    circle.radius = threshold === 'manual' ? manualRadius : radiusMeters(intervention, threshold, attenuated);
+  });
+  interventionIds.forEach((id) => {
+    const intervention = state.interventions.find((item) => item.id === id);
+    if (intervention) intervention.displayThreshold = threshold;
+  });
+  renderZones();
+  renderTitleBlock();
+  saveState();
 }
 
 function geometriesConnected(circles) {
@@ -1716,6 +1775,9 @@ document.querySelector('#reassign-intervention').addEventListener('change', (eve
   removeCirclesFromOverzoneMerges(selectedIds);
   renderZones(); renderTitleBlock(); saveState();
 });
+document.querySelector('#selection-threshold').addEventListener('change', applySelectedBalisage);
+document.querySelector('#selection-manual-radius').addEventListener('change', applySelectedBalisage);
+document.querySelector('#selection-attenuation').addEventListener('change', applySelectedBalisage);
 document.querySelector('#merge-button').addEventListener('click', () => {
   const circles = [...selectedCircleIds].map(circleById).filter(Boolean);
   const intervention = state.interventions.find((item) => item.id === circles[0].interventionId);

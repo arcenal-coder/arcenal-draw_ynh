@@ -202,6 +202,23 @@ class FrontendTests(unittest.TestCase):
         self.assertIn("state.overzoneMerges.push", javascript)
         self.assertIn("key.startsWith('overmerge:')", javascript)
 
+    def test_selected_zones_can_change_balisage_after_merge(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="selection-threshold"', markup)
+        self.assertIn('id="selection-manual-radius"', markup)
+        self.assertIn('id="selection-attenuation"', markup)
+        self.assertIn("function selectedZoneCircleIds()", javascript)
+        self.assertIn("state.merges.filter((merge) => selectedMergeIds.has(merge.id))", javascript)
+        self.assertIn("function applySelectedBalisage()", javascript)
+        self.assertIn("circle.radius = threshold === 'manual' ? manualRadius : radiusMeters", javascript)
+
+    def test_title_block_fonts_are_increased_by_twenty_percent(self):
+        javascript = (ROOT / "app.js").read_text(encoding="utf-8")
+        self.assertIn("function titleBlockFont(size)", javascript)
+        self.assertIn("size * 1.2", javascript)
+        self.assertIn('font-size="${titleBlockFont(2.85)}"', javascript)
+
     def test_onyx_brand_and_responsive_forms_are_integrated(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         markup = (ROOT / "index.html").read_text(encoding="utf-8")

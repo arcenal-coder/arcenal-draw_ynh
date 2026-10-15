@@ -8,21 +8,21 @@ Statut : ACTUEL
 
 ## Version de référence
 
-- Application : `0.9.13~ynh1`.
+- Application en préparation : `0.9.14~ynh1`.
 - Code fonctionnel publié : `5bd19b5ecdf70f046c20fd8764f12ae59755229a`.
 - Catalogues ARCenal `development` et `preview` publiés : `20b226ef1c5f559940e5a995a0371037d1f690f6`.
 
 ## Lot actif
 
-- Mise à jour YunoHost et recette finale de la version `0.9.13~ynh1`.
+- Correction du changement de balisage après dépôt et amélioration de la lisibilité du cartouche.
 
 ## Dernière étape validée
 
-- Application et catalogues ARCenal `development` et `preview` publiés sur GitHub.
+- Changement de seuil disponible pour une sélection simple ou fusionnée et police du cartouche augmentée de 20 %.
 
 ## Tests exécutés
 
-- VALIDÉ : 51 tests automatisés locaux réussis pour la version `0.9.13~ynh1`.
+- VALIDÉ : 53 tests automatisés locaux réussis pour la version `0.9.14~ynh1`.
 - VALIDÉ : syntaxes Python, JavaScript et Bash, puis contrôle des différences Git.
 - VALIDÉ : aucune référence textuelle ou aucun chemin portant le nom du composant supprimé ne subsiste dans les fichiers suivis.
 - VALIDÉ : scripts du paquet acceptés par le linter officiel YunoHost ; contrôles du catalogue public non applicables au catalogue privé ARCenal.
@@ -42,4 +42,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Mettre ARCenal DRAW à jour depuis l’interface YunoHost, puis vérifier l’ouverture, l’import d’un plan, la reprise d’un projet et l’export PDF.
+- Vérifier visuellement le cartouche et le changement de balisage, puis préparer la publication de `0.9.14~ynh1` après confirmation humaine.
