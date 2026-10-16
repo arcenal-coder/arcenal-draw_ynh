@@ -8,17 +8,18 @@ Statut : ACTUEL
 
 ## Version de référence
 
-- Application en préparation : `0.9.16~ynh1`.
-- Code fonctionnel publié : `55c64307ef08012accde85daf302ca6e0004efd5`.
-- Catalogues ARCenal `development`, `preview` et `stable` publiés : `e35a291ffc7f58faa9628751a1bd380440fce373`.
+- Application publiée : `0.9.16~ynh1`.
+- Code fonctionnel publié : `2528740162206f86c286b711024c6b11865a4e88`.
+- Catalogues ARCenal `development`, `preview` et `stable` publiés : `5dcdb65ad0728bd1fb3085fcffa2724b34f05195`.
 
 ## Lot actif
 
-- Renommage public d’ARCenal DRAW en Crobard sans rupture de compatibilité YunoHost.
+- Mise à jour YunoHost vers Crobard `0.9.16~ynh1` et recette finale du renommage.
 
 ## Dernière étape validée
 
-- Nom public Crobard appliqué à l’interface, au manifeste, aux messages et à la documentation.
+- Crobard `0.9.16~ynh1` publié sur GitHub et diffusé dans les trois canaux du Store ARCenal.
+- Workflows GitHub de vérification et de publication du catalogue terminés avec succès.
 
 ## Tests exécutés
 
@@ -44,4 +45,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Valider le renommage et préparer la publication de `0.9.16~ynh1` après confirmation humaine.
+- Mettre à jour l’application depuis l’administration YunoHost et vérifier l’affichage du nom Crobard.
