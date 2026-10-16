@@ -1,6 +1,6 @@
-# Rapport de validation — ARCenal DRAW 0.9.15~ynh1
+# Rapport de validation — Crobard 0.9.16~ynh1
 
-Date : 15 octobre 2026
+Date : 16 octobre 2026
 
 ## Contrôles locaux
 
@@ -9,7 +9,7 @@ Date : 15 octobre 2026
 | Compilation Python | RÉUSSI | `python3 -m py_compile backend/*.py` |
 | Syntaxe JavaScript | RÉUSSI | `node --check app.js` avec Node.js 24.19.0 |
 | Syntaxe Bash | RÉUSSI | `bash -n scripts/*` |
-| Tests automatisés | RÉUSSI | 54 tests réussis |
+| Tests automatisés | RÉUSSI | 55 tests réussis |
 | Propreté du diff | RÉUSSI | `git diff --check` sans erreur |
 | Recherche de secrets | RÉUSSI DANS LE PÉRIMÈTRE | aucun secret détecté dans le code applicatif et les configurations ; les occurrences `password` de PDF.js sont des noms internes de la bibliothèque |
 | Références au composant CAO retiré | RÉUSSI | aucune occurrence textuelle ou aucun chemin suivi restant |

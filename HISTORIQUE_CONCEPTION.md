@@ -1,12 +1,12 @@
-# ARCenal DRAW — Historique de conception et des versions
+# Crobard — Historique de conception et des versions
 
 Dernière mise à jour : 15 octobre 2026
-Version courante au moment de la rédaction : `0.9.15~ynh1`
+Version courante au moment de la rédaction : `0.9.16~ynh1`
 Dépôt : <https://github.com/arcenal-coder/arcenal-draw_ynh>
 
 ## Objet du document
 
-Ce document conserve les décisions de conception, les évolutions fonctionnelles et les corrections techniques d’ARCenal DRAW. Il sert à :
+Ce document conserve les décisions de conception, les évolutions fonctionnelles et les corrections techniques de Crobard, précédemment nommé ARCenal DRAW. Il sert à :
 
 - comprendre pourquoi une fonction existe et comment elle a évolué ;
 - identifier rapidement la version ayant introduit une régression ;
@@ -378,11 +378,18 @@ Le prototype initial a défini les fonctions métier suivantes avant la créatio
 - Répartition de « PLAN DE CONTRÔLE GAMMAGRAPHIQUE » sur deux lignes afin de préserver sa lisibilité sur les écrans et dans les exports PDF.
 - Ajout d’un test de non-régression dédié à la composition de l’en-tête.
 
+#### `0.9.16~ynh1` — 16 octobre 2026
+
+- Renommage public de l’application ARCenal DRAW en Crobard.
+- Conservation de l’identifiant technique `arcenal_draw`, du service et des chemins de données pour garantir la continuité des mises à jour YunoHost.
+- Mise à jour du nom visible dans YunoHost, l’interface, les messages et la documentation.
+- Invalidation du cache des ressources frontend afin d’afficher immédiatement la nouvelle identité après mise à niveau.
+
 ## Solutions abandonnées à ne pas réintroduire sans nouvelle validation
 
 ### Import DWG/DXF dans l’application
 
-Une chaîne de conversion CAO intermédiaire a été essayée entre les versions 0.4.1 et 0.4.3, puis supprimée en 0.5.0. Les problèmes observés concernaient les classes de fichiers instables, les définitions de blocs manquantes, les calques et la lisibilité des épaisseurs. La solution retenue est l’export PDF depuis AutoCAD avant import dans ARCenal DRAW.
+Une chaîne de conversion CAO intermédiaire a été essayée entre les versions 0.4.1 et 0.4.3, puis supprimée en 0.5.0. Les problèmes observés concernaient les classes de fichiers instables, les définitions de blocs manquantes, les calques et la lisibilité des épaisseurs. La solution retenue est l’export PDF depuis AutoCAD avant import dans Crobard.
 
 ### Aplatissement systématique en image 600 DPI
 

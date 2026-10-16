@@ -18,4 +18,4 @@ yunohost service add "$app" --description="Création de plans de contrôle gamma
 ynh_systemctl --service="$app" --action="start" --log_path="systemd"
 ynh_systemctl --service="nginx" --action="reload"
 
-ynh_script_progression --message="ARCenal DRAW est installé." --last
+ynh_script_progression --message="Crobard est installé." --last

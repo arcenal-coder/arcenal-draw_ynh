@@ -4,26 +4,25 @@ Statut : ACTUEL
 
 ## Objectif
 
-- Concevoir, maintenir et publier ARCenal DRAW, application YunoHost de création de plans d’impact radiologique à partir de fonds PDF, PNG ou JPEG.
+- Concevoir, maintenir et publier Crobard, application YunoHost de création de plans d’impact radiologique à partir de fonds PDF, PNG ou JPEG.
 
 ## Version de référence
 
-- Application publiée : `0.9.15~ynh1`.
+- Application en préparation : `0.9.16~ynh1`.
 - Code fonctionnel publié : `55c64307ef08012accde85daf302ca6e0004efd5`.
 - Catalogues ARCenal `development`, `preview` et `stable` publiés : `e35a291ffc7f58faa9628751a1bd380440fce373`.
 
 ## Lot actif
 
-- Mise à jour YunoHost vers la version stable `0.9.15~ynh1` et recette visuelle finale.
+- Renommage public d’ARCenal DRAW en Crobard sans rupture de compatibilité YunoHost.
 
 ## Dernière étape validée
 
-- Version `0.9.15~ynh1` publiée sur GitHub et diffusée dans les trois canaux du Store ARCenal.
-- Workflows GitHub de vérification et de publication du catalogue terminés avec succès.
+- Nom public Crobard appliqué à l’interface, au manifeste, aux messages et à la documentation.
 
 ## Tests exécutés
 
-- VALIDÉ : 54 tests automatisés locaux réussis pour la version `0.9.15~ynh1`.
+- VALIDÉ : 55 tests automatisés locaux réussis pour la version `0.9.16~ynh1`.
 - VALIDÉ : syntaxes Python, JavaScript et Bash, puis contrôle des différences Git.
 - VALIDÉ : aucune référence textuelle ou aucun chemin portant le nom du composant supprimé ne subsiste dans les fichiers suivis.
 - VALIDÉ : scripts du paquet acceptés par le linter officiel YunoHost ; contrôles du catalogue public non applicables au catalogue privé ARCenal.
@@ -45,4 +44,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Mettre à jour ARCenal DRAW depuis l’administration YunoHost, puis vérifier visuellement le cartouche et son export PDF.
+- Valider le renommage et préparer la publication de `0.9.16~ynh1` après confirmation humaine.

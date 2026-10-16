@@ -1974,7 +1974,7 @@ async function handlePlanFile(file) {
     document.querySelector('#save-status').textContent = 'Import du plan…';
     try {
       pendingPlanImport = await uploadPlanFile(file);
-      if (!pendingPlanImport.previewUrl) throw new Error('Le serveur utilise encore une ancienne version du moteur d’import. Mettez ARCenal DRAW à jour dans YunoHost.');
+      if (!pendingPlanImport.previewUrl) throw new Error('Le serveur utilise encore une ancienne version du moteur d’import. Mettez Crobard à jour dans YunoHost.');
       document.querySelector('#save-status').textContent = `Plan converti avec ${pendingPlanImport.conversion}`;
       pendingPlanImport.createdAt ||= new Date().toISOString();
       reusablePlans = [pendingPlanImport, ...reusablePlans.filter((plan) => plan.id !== pendingPlanImport.id)];

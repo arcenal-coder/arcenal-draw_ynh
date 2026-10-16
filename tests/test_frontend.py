@@ -6,6 +6,14 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class FrontendTests(unittest.TestCase):
+    def test_crobard_is_the_public_name(self):
+        markup = (ROOT / "index.html").read_text(encoding="utf-8")
+        manifest = (ROOT / "manifest.toml").read_text(encoding="utf-8")
+        self.assertIn("<title>Crobard</title>", markup)
+        self.assertIn("<strong>Crobard</strong>", markup)
+        self.assertIn('name = "Crobard"', manifest)
+        self.assertIn('id = "arcenal_draw"', manifest)
+
     def test_first_company_uses_generic_default_name(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         self.assertIn("{ company: 'Société 1'", javascript)

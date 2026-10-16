@@ -1,11 +1,11 @@
-# Revue finale avant production — ARCenal DRAW
+# Revue finale avant production — Crobard
 
 Date : 12 octobre 2026
 Version examinée : `0.9.13~ynh1`
 
 ## Architecture et données
 
-ARCenal DRAW utilise une interface statique sans framework, une API WSGI Python, SQLite, Gunicorn, Nginx, Poppler et PDF.js. Le SSO YunoHost fournit l’identité au backend. Les données traitées comprennent des plans techniques, les positions et paramètres radiologiques, les informations de société, les noms, fonctions et signatures du réalisateur et du validateur, ainsi que les exports.
+Crobard utilise une interface statique sans framework, une API WSGI Python, SQLite, Gunicorn, Nginx, Poppler et PDF.js. Le SSO YunoHost fournit l’identité au backend. Les données traitées comprennent des plans techniques, les positions et paramètres radiologiques, les informations de société, les noms, fonctions et signatures du réalisateur et du validateur, ainsi que les exports.
 
 ## Passe 1 — Nettoyage et syntaxe
 

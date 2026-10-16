@@ -1,6 +1,6 @@
-# ARCenal DRAW
+# Crobard
 
-ARCenal DRAW est une application YunoHost de conception de plans d’impact radiologique. Elle importe des fonds PDF, PNG ou JPEG, permet leur calibrage métrique, ajoute les zones de balisage, conserve des instantanés d’export réouvrables et produit un export PDF WYSIWYG par la fonction d’impression du navigateur.
+Crobard est une application YunoHost de conception de plans d’impact radiologique. Elle importe des fonds PDF, PNG ou JPEG, permet leur calibrage métrique, ajoute les zones de balisage, conserve des instantanés d’export réouvrables et produit un export PDF WYSIWYG par la fonction d’impression du navigateur.
 
 ## Architecture
 
