@@ -1,5 +1,13 @@
 # Crobard — synthèse fonctionnelle du POC
 
+## Consultation client — V1 0.10.0
+
+- Publication explicite depuis l’éditeur : fond de plan complet, annotations et cartouche ; aucune modification du projet n’est visible avant republication.
+- Lien permanent, sans compte YunoHost, protégé par un code d’accès. Le même lien charge la dernière publication après actualisation.
+- Déplacement, zoom ×1 à ×50, cartouche responsive et mesures temporaires. Aucun réglage, calibrage, impact, surbalisage, suppression ou modification des éléments publiés.
+- Révocation et échéance facultative ; changement de code invalidant les sessions antérieures.
+- Voir la matrice de droits, les choix techniques et la recette dans `.arcenal/CLIENT_CONSULTATION.md`.
+
 ## Principe directeur
 
 La feuille visible est la source de vérité du rendu. Le zoom d'affichage ne modifie pas le document. Le zoom du plan dans la feuille modifie sa correspondance métrique et recalcule immédiatement l'échelle graphique du cartouche.

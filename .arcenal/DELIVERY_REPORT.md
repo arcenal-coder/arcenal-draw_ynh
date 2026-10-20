@@ -1,5 +1,25 @@
 # Livraison Crobard 0.9.17~ynh1 — Preview
 
+## Candidate locale suivante — 0.10.0~ynh1
+
+Développée le 20 octobre 2026, non publiée. Lot : `.arcenal/CLIENT_CONSULTATION.md`.
+Publication volontaire d’une consultation client par lien permanent et code,
+lecture seule, zoom/déplacement et mesures temporaires. Accès public limité au
+sous-chemin `/consultation/` ; aucune action de production ni donnée réelle modifiée.
+
+Contrôles : 69 tests Python, scénario JavaScript des mesures, syntaxes Python/JS/Bash,
+recette navigateur locale sur données fictives (ouverture protégée, publication,
+rechargement, mesures, mobile et PDF natif jusqu’à ×50). Linter YunoHost : six scripts
+acceptés, résultat global partiel pour les avertissements catalogue public préexistants.
+Résolution Store 0.10.0, installation, mise à niveau, cookies HTTPS et permissions
+SSO réelles, sauvegarde/restauration, recette client : NON_EXÉCUTÉES.
+
+Preuves visuelles locales non versionnées : `output/consultation-client-desktop.jpg`
+et `output/consultation-client-mobile.jpg`. La base est étendue par création de tables
+additives ; les fichiers publiés sont sauvegardés avec `data_dir`.
+
+## Livraison publiée précédente
+
 Date : 20 octobre 2026.
 
 - Dépôt source : https://github.com/arcenal-coder/arcenal-draw_ynh

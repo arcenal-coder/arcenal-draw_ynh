@@ -11,19 +11,21 @@ Statut : ACTUEL
 - Preview publiée : `0.9.17~ynh1`, branche `preview`, paquet `a8f71633e5e227f7a1d459c615a3a34179e78050`.
 - Catalogue Preview publié : `b2a67ee6ac66f6f1deca9e3681b6a3ea606b4a3b` ; flux publics et manifeste vérifiés.
 - Stable conservée en `0.9.16~ynh1`, paquet `2528740162206f86c286b711024c6b11865a4e88`.
+- Candidate locale : `0.10.0~ynh1`, consultation client protégée par code.
 
 ## Lot actif
 
-- Corriger le libellé YunoHost conservé après mise à jour et rendre les mesures précises, lisibles et supprimables.
+- Consultation extérieure : publication volontaire, lien permanent protégé par code, vue lecture seule et mesures temporaires.
 
 ## Dernière étape validée
 
 - Le client confirme la mise à jour 0.9.16 et le nom Crobard dans l’application ; l’ancien nom persiste dans YunoHost.
 - Preview 0.9.17 publiée : synchronisation des deux libellés YunoHost et nouveau rendu des mesures avec croix fines, aperçu et sélection du trait ou du texte.
+- Candidate 0.10.0 développée localement ; parcours auteur/client testé sur données fictives, mobile et PDF natif jusqu’à ×50.
 
 ## Tests exécutés
 
-- VALIDÉ : 57 tests Python et scénario JavaScript de création, aperçu, calibrage, zoom et suppression des mesures pour la candidate `0.9.17~ynh1`.
+- VALIDÉ : 69 tests Python, dont les accès à la consultation, et scénario JavaScript des mesures pour la candidate `0.10.0~ynh1`.
 - VALIDÉ : syntaxes Python, JavaScript et Bash, puis contrôle des différences Git.
 - VALIDÉ : aucune référence textuelle ou aucun chemin portant le nom du composant supprimé ne subsiste dans les fichiers suivis.
 - VALIDATION PARTIELLE : six scripts acceptés par le linter officiel YunoHost ; code global 1 pour absence du catalogue public et avertissements préexistants.
@@ -45,4 +47,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Damien met à jour depuis le canal Preview du Store, puis vérifie le nom Crobard dans YunoHost, les deux points et la distance des mesures, leur sélection et leur suppression.
+- Faire valider la V1 de consultation client ; préparer sa publication Preview puis exécuter la recette YunoHost isolée (SSO privé / consultation publique, HTTPS, backup/restore).

@@ -12,6 +12,12 @@ configure_files() {
     ynh_config_add_systemd
 }
 
+install_consultation_files() {
+    mkdir -p "$install_dir/web/consultation/assets"
+    cp "$package_root/public/index.html" "$package_root/public/viewer.js" "$package_root/public/viewer.css" "$install_dir/web/consultation/"
+    cp -a "$package_root/assets/." "$install_dir/web/consultation/assets/"
+}
+
 set_runtime_permissions() {
     chown "$app:www-data" "$install_dir"
     chown -R "$app:www-data" "$install_dir/web"

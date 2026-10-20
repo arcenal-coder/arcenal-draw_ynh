@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>Crobard</title>
-    <link rel="stylesheet" href="styles.css?v=0.9.17" />
+    <link rel="stylesheet" href="styles.css?v=0.10.0" />
     <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
   </head>
   <body>
@@ -61,6 +61,7 @@
           <div class="zoom-field"><span>Zoom du plan</span><div class="zoom-control"><button id="zoom-out" type="button" aria-label="Réduire le zoom">−</button><input id="plan-zoom" type="range" min="1" max="50" step="0.5" value="1" /><button id="zoom-in" type="button" aria-label="Augmenter le zoom">+</button></div><output id="plan-zoom-value">1×</output></div>
           <button class="secondary" id="recalibrate-button">Calibrer</button>
           <button class="secondary" id="settings-button">⚙ Paramètres</button>
+          <button class="secondary" id="share-button">Consultation client</button>
           <button class="primary" id="export-button">Export PDF</button>
         </div>
       </header>
@@ -177,6 +178,24 @@
         <div class="dialog-actions"><button type="button" class="primary" id="start-calibration">Calibrer</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=0.9.17"></script>
+    <dialog id="share-dialog" aria-labelledby="share-title">
+      <form id="share-form">
+        <h2 id="share-title">Consultation client</h2>
+        <p>Publiez le plan complet, ses annotations et les informations du cartouche. Les destinataires disposant du lien et du code pourront consulter et mesurer, sans modifier votre projet.</p>
+        <p id="share-status" role="status" aria-live="polite"></p>
+        <label>Fin d’accès facultative<input id="share-expiry" type="date"></label>
+        <label>Code d’accès<input id="share-code" type="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="Vide : code généré au premier partage"></label>
+        <small>Lors d’une mise à jour, laissez le code vide pour le conserver. Un nouveau code ferme les sessions existantes.</small>
+        <div id="share-result" hidden>
+          <label>Lien permanent<input id="share-link" type="text" readonly></label>
+          <button id="copy-share-link" type="button" class="secondary">Copier le lien</button>
+          <label id="share-generated-row" hidden>Code à transmettre séparément<input id="share-generated-code" type="text" readonly></label>
+          <small>Le code est affiché uniquement à sa création ou à son changement. Conservez-le avant de fermer.</small>
+        </div>
+        <div class="dialog-actions"><button id="revoke-share" type="button" class="secondary" hidden>Révoquer le lien</button><button id="close-share" type="button" class="secondary">Fermer</button><button id="publish-share" type="submit" class="primary">Publier la consultation</button></div>
+      </form>
+    </dialog>
+    <script src="app.js?v=0.10.0"></script>
+    <script src="sharing.js?v=0.10.0"></script>
   </body>
 </html>

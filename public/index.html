@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Crobard — consultation client</title><link rel="stylesheet" href="viewer.css?v=0.10.0"></head>
+<body>
+  <main id="access" class="access">
+    <form id="access-form" class="access-card">
+      <img src="assets/onyx-logo.png" alt="ONYX" width="140">
+      <h1>Consultation du plan</h1><p>Saisissez le code communiqué avec votre lien.</p>
+      <label for="access-code">Code d’accès</label><input id="access-code" type="password" autocomplete="current-password" minlength="8" maxlength="128" required>
+      <button id="open-plan" type="submit">Ouvrir le plan</button><p id="access-message" role="status" aria-live="polite"></p>
+    </form>
+  </main>
+  <main id="viewer" hidden>
+    <header><div class="heading"><strong id="plan-name">Consultation client</strong><small id="published-date"></small></div>
+      <nav aria-label="Consultation"><button id="zoom-out" aria-label="Réduire le zoom">−</button><output id="zoom-label">1×</output><button id="zoom-in" aria-label="Augmenter le zoom">+</button><button id="fit">Voir tout</button><button id="measure" aria-pressed="false">Mesurer</button><button id="title-toggle" aria-expanded="true" aria-controls="cartouche">Cartouche</button><button id="close-view">Fermer</button></nav>
+    </header>
+    <section id="stage" aria-label="Plan en lecture seule : glisser pour déplacer, molette pour zoomer">
+      <div id="pdf-layer"></div>
+      <svg id="drawing" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan publié et annotations"><image id="plan-image" preserveAspectRatio="xMidYMid meet"/><g id="published-overlay"></g><g id="local-measures"></g></svg>
+      <aside id="cartouche" aria-label="Cartouche du plan"></aside>
+      <div class="hint"><span id="hint">Glissez pour déplacer. Molette ou boutons pour zoomer.</span><button id="clear-measures" hidden>Effacer mes mesures temporaires</button></div>
+      <p id="viewer-message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <script type="module" src="viewer.js?v=0.10.0"></script>
+</body>
+</html>

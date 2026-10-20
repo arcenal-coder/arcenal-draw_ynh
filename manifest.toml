@@ -4,7 +4,7 @@ id = "arcenal_draw"
 name = "Crobard"
 description.fr = "Conception de plans de contrôle gammagraphique"
 description.en = "Design gamma radiography control plans"
-version = "0.9.17~ynh1"
+version = "0.10.0~ynh1"
 maintainers = ["ARCenal"]
 
 [upstream]
@@ -45,6 +45,12 @@ ram.build = "500M"
         [resources.permissions.main]
         url = "/"
         auth_header = true
+
+        [resources.permissions.consultation]
+        url = "/consultation"
+        allowed = "visitors"
+        show_tile = false
+        auth_header = false
 
     [resources.ports]
         [resources.ports.main]

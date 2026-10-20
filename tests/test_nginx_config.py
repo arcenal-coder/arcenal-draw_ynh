@@ -29,8 +29,8 @@ class NginxConfigTests(unittest.TestCase):
         markup = (ROOT / "index.html").read_text(encoding="utf-8")
 
         self.assertIn('more_set_headers "Cache-Control: no-cache, must-revalidate"', nginx)
-        self.assertIn('styles.css?v=0.9.17', markup)
-        self.assertIn('app.js?v=0.9.17', markup)
+        self.assertIn('styles.css?v=0.10.0', markup)
+        self.assertIn('app.js?v=0.10.0', markup)
 
     def test_frontend_has_restrictive_security_headers(self):
         nginx = (ROOT / "conf" / "nginx.conf").read_text(encoding="utf-8")

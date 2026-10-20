@@ -8,7 +8,7 @@ import uuid
 from http import HTTPStatus
 from urllib.parse import unquote
 
-from backend import db
+from backend import db, sharing
 from backend.importer import ImportErrorSafe, convert_upload, delete_import, original_file, preview_file, store_upload
 
 
@@ -32,7 +32,7 @@ def response(start_response, status, payload=None, headers=None):
     return [body]
 
 
-def file_response(environ, start_response, path, media_type):
+def file_response(environ, start_response, path, media_type, private=False):
     size = path.stat().st_size
     range_header = environ.get("HTTP_RANGE") or ""
     match = re.fullmatch(r"bytes=(\d+)-(\d*)", range_header)
@@ -49,7 +49,7 @@ def file_response(environ, start_response, path, media_type):
         ("Content-Type", media_type),
         ("Content-Length", str(length)),
         ("Accept-Ranges", "bytes"),
-        ("Cache-Control", "private, max-age=86400"),
+        ("Cache-Control", "no-store" if private else "private, max-age=86400"),
         ("X-Content-Type-Options", "nosniff"),
     ]
     if status.startswith("206"):
@@ -116,12 +116,33 @@ def route(environ, start_response):
     if path == "/api/health" and method == "GET":
         return response(start_response, HTTPStatus.OK, {"status": "ok"})
 
+    if path.startswith("/public/"):
+        return sharing.public_route(environ, start_response, response, read_json, file_response)
+
     owner = current_user(environ)
     if not owner:
         return response(start_response, HTTPStatus.UNAUTHORIZED, {"error": "Authentification requise."})
 
     if path == "/api/projects" and method == "GET":
         return response(start_response, HTTPStatus.OK, {"projects": db.list_projects(owner)})
+
+    share_match = re.fullmatch(r"/api/projects/([a-zA-Z0-9_-]{1,80})/consultation", path)
+    if share_match:
+        project_id = share_match[1]
+        if not db.get_project(owner, project_id):
+            return response(start_response, HTTPStatus.NOT_FOUND, {"error": "Projet introuvable."})
+        if method == "GET":
+            return response(start_response, HTTPStatus.OK, {"share": sharing.share_info(owner, project_id)})
+        if method == "POST":
+            if environ.get("HTTP_X_CROBARD_PUBLISH") != "1":
+                return response(start_response, HTTPStatus.FORBIDDEN, {"error": "Publication non autorisée."})
+            return response(start_response, HTTPStatus.OK, {"share": sharing.publish(owner, project_id, read_json(environ))})
+        if method == "DELETE":
+            if environ.get("HTTP_X_CROBARD_PUBLISH") != "1":
+                return response(start_response, HTTPStatus.FORBIDDEN, {"error": "Révocation non autorisée."})
+            sharing.revoke(owner, project_id)
+            return response(start_response, HTTPStatus.OK, {"revoked": True})
+        return response(start_response, HTTPStatus.METHOD_NOT_ALLOWED, {"error": "Action non autorisée."})
 
     project_match = re.fullmatch(r"/api/projects/([^/]+)", path)
     if project_match:
@@ -269,3 +290,4 @@ def route(environ, start_response):
 
 
 db.initialize()
+sharing.initialize()

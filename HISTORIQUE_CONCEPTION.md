@@ -1,7 +1,7 @@
 # Crobard — Historique de conception et des versions
 
 Dernière mise à jour : 20 octobre 2026
-Version courante au moment de la rédaction : `0.9.17~ynh1` (candidate Preview)
+Version courante au moment de la rédaction : `0.10.0~ynh1` (candidate locale Preview)
 Dépôt : <https://github.com/arcenal-coder/arcenal-draw_ynh>
 
 ## Objet du document
@@ -393,6 +393,16 @@ Le prototype initial a défini les fonctions métier suivantes avant la créatio
 - Retour en mode sélection après le second clic ; sélection possible sur le trait ou l’étiquette, puis suppression par la corbeille ou Retour/Supprimer.
 - Conservation du format des mesures enregistrées : les projets existants bénéficient du nouveau rendu.
 - Tests comportementaux sur les deux clics, le calibrage, le zoom ×1/×10/×50 et la sélection/suppression ; tests des commandes de renommage et de leur propagation d’erreur.
+
+#### `0.10.0~ynh1` — 20 octobre 2026 — candidate locale Preview
+
+- Consultation client distincte de l’éditeur, sans compte YunoHost, par lien permanent et code d’accès.
+- Publication volontaire du fond complet et des annotations dans une révision figée. Actualiser la page charge la dernière révision publiée.
+- Zoom, déplacement, cartouche responsive et mesures temporaires ; aucune opération d’écriture publique sur les projets.
+- Codes hachés, sessions HttpOnly/Secure révocables, fin d’accès facultative, limitation des tentatives et SVG reconstruit par liste blanche.
+- Nouvelle permission visiteurs limitée à `/consultation` ; fonds publiés intégrés aux sauvegardes existantes.
+- 69 tests Python et tests JavaScript existants réussis ; contrôle navigateur sur données fictives : publication, code, mesures, rechargement, mobile et PDF natif jusqu’à ×50.
+- Recette YunoHost réelle non exécutée ; version non publiée à ce stade.
 
 ## Solutions abandonnées à ne pas réintroduire sans nouvelle validation
 
