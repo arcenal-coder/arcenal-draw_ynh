@@ -8,10 +8,10 @@ Statut : ACTUEL
 
 ## Version de référence
 
-- Preview publiée : `0.9.17~ynh1`, branche `preview`, paquet `a8f71633e5e227f7a1d459c615a3a34179e78050`.
-- Catalogue Preview publié : `b2a67ee6ac66f6f1deca9e3681b6a3ea606b4a3b` ; flux publics et manifeste vérifiés.
+- Preview publiée : `0.10.0~ynh1`, branche `preview`, paquet `21531d12a9124344561cb31c970b644659c90d7a`.
+- Catalogue Preview publié : `ffab97a19c2c20ea1cd29e7f9bc2746a05c24e2a` ; flux publics et manifeste vérifiés.
 - Stable conservée en `0.9.16~ynh1`, paquet `2528740162206f86c286b711024c6b11865a4e88`.
-- Candidate locale : `0.10.0~ynh1`, consultation client protégée par code.
+- Consultation client protégée par code intégrée à Crobard ; aucune seconde application créée.
 
 ## Lot actif
 
@@ -21,7 +21,7 @@ Statut : ACTUEL
 
 - Le client confirme la mise à jour 0.9.16 et le nom Crobard dans l’application ; l’ancien nom persiste dans YunoHost.
 - Preview 0.9.17 publiée : synchronisation des deux libellés YunoHost et nouveau rendu des mesures avec croix fines, aperçu et sélection du trait ou du texte.
-- Candidate 0.10.0 développée localement ; parcours auteur/client testé sur données fictives, mobile et PDF natif jusqu’à ×50.
+- Preview 0.10.0 publiée sur demande de Damien ; parcours auteur/client testé sur données fictives, mobile et PDF natif jusqu’à ×50. Validation réelle YunoHost encore NON_EXÉCUTÉE.
 
 ## Tests exécutés
 
@@ -47,4 +47,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Faire valider la V1 de consultation client ; préparer sa publication Preview puis exécuter la recette YunoHost isolée (SSO privé / consultation publique, HTTPS, backup/restore).
+- Exécuter la recette YunoHost isolée de la Preview 0.10.0 (SSO privé / consultation publique, HTTPS, backup/restore), puis faire valider la V1 par Damien avant partage de plans clients.

@@ -1,4 +1,4 @@
-# Rapport de validation — Crobard 0.10.0~ynh1 (candidate locale Preview)
+# Rapport de validation — Crobard 0.10.0~ynh1 (Preview publiée)
 
 Date : 20 octobre 2026
 
@@ -12,6 +12,8 @@ Date : 20 octobre 2026
 | Tests Python | RÉUSSI | 69 tests, dont publication, isolation propriétaire, sessions/cookies, refus d’écriture publique, code erroné et limitation des essais, changement de code, expiration/révocation, refus SVG actif et persistance du fond publié |
 | Mesures JavaScript | RÉUSSI | `node tests/measurement_behaviour.cjs` : création, aperçu non sauvegardé, distance calibrée, repères au zoom ×1/×10/×50, sélection et suppression |
 | Propreté du diff | RÉUSSI | `git diff --check` sans erreur |
+| Contrôles GitHub du paquet | RÉUSSI | workflow `39400963352`, paquet `21531d12a9124344561cb31c970b644659c90d7a` sur `preview` |
+| Catalogue ARCenal Preview | RÉUSSI DANS LE PÉRIMÈTRE | 23 tests, workflow de promotion `39401152407`, flux publics bruts et manifeste GitHub cohérents en `0.10.0~ynh1` ; aucune installation YunoHost exécutée |
 | Recherche de secrets | RÉUSSI DANS LE PÉRIMÈTRE | aucun secret détecté dans le code applicatif et les configurations ; les occurrences `password` de PDF.js sont des noms internes de la bibliothèque |
 | Références au composant CAO retiré | RÉUSSI | aucune occurrence textuelle ou aucun chemin suivi restant |
 | Linter officiel YunoHost | VALIDATION PARTIELLE | paquet 0.10.0 contrôlé sur une copie sans espace ; six scripts acceptés, code de sortie 1 pour absence du catalogue public YunoHost, avertissements préexistants de licence propriétaire, README, service et change_url |

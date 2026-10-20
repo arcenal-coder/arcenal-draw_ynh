@@ -1,8 +1,8 @@
-# Livraison Crobard 0.9.17~ynh1 — Preview
+# Livraison Crobard 0.10.0~ynh1 — Preview
 
-## Candidate locale suivante — 0.10.0~ynh1
+## Publication 0.10.0~ynh1
 
-Développée le 20 octobre 2026, non publiée. Lot : `.arcenal/CLIENT_CONSULTATION.md`.
+Développée et publication autorisée par Damien le 20 octobre 2026. Lot : `.arcenal/CLIENT_CONSULTATION.md`.
 Publication volontaire d’une consultation client par lien permanent et code,
 lecture seule, zoom/déplacement et mesures temporaires. Accès public limité au
 sous-chemin `/consultation/` ; aucune action de production ni donnée réelle modifiée.
@@ -11,8 +11,21 @@ Contrôles : 69 tests Python, scénario JavaScript des mesures, syntaxes Python/
 recette navigateur locale sur données fictives (ouverture protégée, publication,
 rechargement, mesures, mobile et PDF natif jusqu’à ×50). Linter YunoHost : six scripts
 acceptés, résultat global partiel pour les avertissements catalogue public préexistants.
-Résolution Store 0.10.0, installation, mise à niveau, cookies HTTPS et permissions
-SSO réelles, sauvegarde/restauration, recette client : NON_EXÉCUTÉES.
+Installation, mise à niveau, cookies HTTPS et permissions SSO réelles,
+sauvegarde/restauration, recette client : NON_EXÉCUTÉES. Cette publication ne vaut
+pas validation de production ; vérifier le sous-chemin public et le maintien du
+SSO privé sur une instance de recette avant partage de données clients.
+
+- Source : https://github.com/arcenal-coder/arcenal-draw_ynh, branche `preview`.
+- SHA du paquet : `21531d12a9124344561cb31c970b644659c90d7a`.
+- Contrôles GitHub du paquet : RÉUSSIS, https://github.com/arcenal-coder/arcenal-draw_ynh/actions/runs/39400963352
+- Référencement catalogue : `9cebd9a1a400353a08dab7fe74feaa322541c6f9`, seule application modifiée : `arcenal_draw`.
+- Contrôles GitHub du catalogue : RÉUSSIS, https://github.com/arcenal-coder/arcenal-systeme-catalogue/actions/runs/39401045391
+- Workflow officiel de promotion Preview : RÉUSSI, https://github.com/arcenal-coder/arcenal-systeme-catalogue/actions/runs/39401152407
+- Catalogue Preview : `ffab97a19c2c20ea1cd29e7f9bc2746a05c24e2a`. Flux publics bruts `preview/v1/release.json` et `preview/v3/apps.json` VÉRIFIÉS : version `0.10.0~ynh1`, branche `preview` et SHA exact du paquet, manifeste GitHub cohérent. Stable inchangée en `0.9.16~ynh1`.
+- Workflow de publication du Store : RÉUSSI, https://github.com/arcenal-coder/arcenal-systeme-catalogue/actions/runs/39401192353 ; miroir GitHub Pages vérifié sur les flux Preview v1 et v3, même version et SHA.
+- 23 tests du catalogue RÉUSSIS après promotion. Aucune mise à jour de serveur exécutée.
+- Retour arrière : conserver la sauvegarde YunoHost précédant la mise à niveau et la restaurer pour un retour complet. Paquet précédent : `a8f71633e5e227f7a1d459c615a3a34179e78050`, version `0.9.17~ynh1`.
 
 Preuves visuelles locales non versionnées : `output/consultation-client-desktop.jpg`
 et `output/consultation-client-mobile.jpg`. La base est étendue par création de tables
