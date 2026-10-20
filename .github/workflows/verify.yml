@@ -1,9 +1,9 @@
-name: Vérifier le paquet ARCenal DRAW
+name: Vérifier le paquet ARCenal Crobard
 
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, preview]
 
 permissions:
   contents: read
@@ -21,6 +21,10 @@ jobs:
           python -m py_compile backend/*.py
           python -m unittest discover -s tests -v
           bash -n scripts/*
+          node --check app.js
+          node --check sharing.js
+          node --check public/viewer.js
+          node tests/measurement_behaviour.cjs
       - name: Exécuter le linter YunoHost
         # ARCenal DRAW est publié dans le catalogue privé ARCenal. Le linter
         # officiel retourne donc une erreur attendue « absente du catalogue
