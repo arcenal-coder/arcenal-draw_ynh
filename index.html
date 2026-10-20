@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>Crobard</title>
-    <link rel="stylesheet" href="styles.css?v=0.10.0" />
+    <link rel="stylesheet" href="styles.css?v=0.10.1" />
     <style id="print-page-style">@page { size: A3 landscape; margin: 0; }</style>
   </head>
   <body>
@@ -59,6 +59,7 @@
         <div class="header-actions">
           <label>Orientation<select id="orientation-select"><option value="landscape">A3 paysage</option><option value="portrait">A3 portrait</option></select></label>
           <div class="zoom-field"><span>Zoom du plan</span><div class="zoom-control"><button id="zoom-out" type="button" aria-label="Réduire le zoom">−</button><input id="plan-zoom" type="range" min="1" max="50" step="0.5" value="1" /><button id="zoom-in" type="button" aria-label="Augmenter le zoom">+</button></div><output id="plan-zoom-value">1×</output></div>
+          <button class="secondary" id="fit-plan" type="button" title="Revenir au plan entier à 1×">Voir tout</button>
           <button class="secondary" id="recalibrate-button">Calibrer</button>
           <button class="secondary" id="settings-button">⚙ Paramètres</button>
           <button class="secondary" id="share-button">Consultation client</button>
@@ -195,7 +196,8 @@
         <div class="dialog-actions"><button id="revoke-share" type="button" class="secondary" hidden>Révoquer le lien</button><button id="close-share" type="button" class="secondary">Fermer</button><button id="publish-share" type="submit" class="primary">Publier la consultation</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=0.10.0"></script>
-    <script src="sharing.js?v=0.10.0"></script>
+    <script src="assets/balisage.js?v=0.10.1"></script>
+    <script src="app.js?v=0.10.1"></script>
+    <script src="sharing.js?v=0.10.1"></script>
   </body>
 </html>

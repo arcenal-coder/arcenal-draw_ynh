@@ -12,10 +12,11 @@ Statut : ACTUEL
 - Catalogue Preview publié : `ffab97a19c2c20ea1cd29e7f9bc2746a05c24e2a` ; flux publics et manifeste vérifiés.
 - Stable conservée en `0.9.16~ynh1`, paquet `2528740162206f86c286b711024c6b11865a4e88`.
 - Consultation client protégée par code intégrée à Crobard ; aucune seconde application créée.
+- Candidate locale non publiée : `0.10.1~ynh1`, cartouches, balisages multiples, alignement des outils et bouton Voir tout.
 
 ## Lot actif
 
-- Consultation extérieure : publication volontaire, lien permanent protégé par code, vue lecture seule et mesures temporaires.
+- Finitions visuelles demandées par Damien, décrites dans `.arcenal/CARTOUCHE_REFINEMENT.md` ; montrer le résultat avant toute publication.
 
 ## Dernière étape validée
 
@@ -47,4 +48,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Exécuter la recette YunoHost isolée de la Preview 0.10.0 (SSO privé / consultation publique, HTTPS, backup/restore), puis faire valider la V1 par Damien avant partage de plans clients.
+- Faire valider les captures de la candidate locale 0.10.1 avant publication. La recette YunoHost isolée reste nécessaire avant partage de plans clients.

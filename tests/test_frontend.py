@@ -230,7 +230,7 @@ class FrontendTests(unittest.TestCase):
     def test_title_block_header_keeps_logo_and_title_separate(self):
         javascript = (ROOT / "app.js").read_text(encoding="utf-8")
         self.assertIn("const titleHeader", javascript)
-        self.assertIn('x1="20.5"', javascript)
+        self.assertNotIn('x1="20.5"', javascript)
         self.assertIn('transform="translate(23 0)"', javascript)
         self.assertIn('>PLAN DE CONTRÔLE</text>', javascript)
         self.assertIn('>GAMMAGRAPHIQUE</text>', javascript)

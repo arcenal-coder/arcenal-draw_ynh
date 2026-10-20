@@ -1,8 +1,19 @@
 # Crobard — Historique de conception et des versions
 
 Dernière mise à jour : 20 octobre 2026
-Version courante au moment de la rédaction : `0.10.0~ynh1` (candidate locale Preview)
+Version courante au moment de la rédaction : `0.10.1~ynh1` (candidate locale, non publiée ; Preview publiée : 0.10.0)
 Dépôt : <https://github.com/arcenal-coder/arcenal-draw_ynh>
+
+## Candidate 0.10.1 — cartouches et navigation
+
+- Cartouche du plan arrondi, suppression des séparateurs de tableau, conservation
+  de toutes les informations et adaptation des textes longs.
+- Consultation client plus compacte, cartes d’équipes arrondies.
+- Affichage de tous les balisages distincts visibles par équipe : seuil, distance
+  réellement posée et atténuation ; valeurs manuelles conservées, sans doublons.
+- Bouton Voir tout de l’éditeur : ×1 et déplacement nul, sans modifier le calibrage.
+- Libellés des outils centrés et contenus, barre mobile sans chevauchement fixe.
+- Candidate montrée à Damien avant publication ; contrôles dans `TEST_REPORT.md`.
 
 ## Objet du document
 

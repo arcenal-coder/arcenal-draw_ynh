@@ -24,7 +24,9 @@ jobs:
           node --check app.js
           node --check sharing.js
           node --check public/viewer.js
+          node --check assets/balisage.js
           node tests/measurement_behaviour.cjs
+          node tests/cartouche_behaviour.cjs
       - name: Exécuter le linter YunoHost
         # ARCenal DRAW est publié dans le catalogue privé ARCenal. Le linter
         # officiel retourne donc une erreur attendue « absente du catalogue

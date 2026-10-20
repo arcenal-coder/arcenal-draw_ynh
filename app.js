@@ -713,9 +713,31 @@ function titleBlockFont(size) {
   return Number((size * 1.2).toFixed(2));
 }
 
+function titleBlockText(value, x, y, width, size, weight = 400) {
+  const font = titleBlockFont(size);
+  const context = titleBlockText.context ||= document.createElement('canvas').getContext('2d');
+  context.font = `${weight} ${font}px Arial`;
+  const lines = [];
+  let line = '';
+  for (const word of String(value).split(/\s+/)) {
+    if (line && context.measureText(`${line} ${word}`).width > width) { lines.push(line); line = ''; }
+    for (const character of (line ? ` ${word}` : word)) {
+      if (line && context.measureText(line + character).width > width) { lines.push(line); line = ''; }
+      line += character;
+    }
+  }
+  lines.push(line);
+  const lineHeight = font * 1.35;
+  return { height: lines.length * lineHeight, markup: `<text x="${x}" y="${y}" font-family="Arial,sans-serif" font-size="${font}" font-weight="${weight}">${lines.map((text, i) => `<tspan x="${x}" dy="${i ? lineHeight : 0}">${escapeText(text)}</tspan>`).join('')}</text>` };
+}
+
 function personRowMarkup(label, person, y, width) {
-  const signature = person.signature?.dataUrl ? `<image href="${person.signature.dataUrl}" x="55" y="1" width="24" height="12" preserveAspectRatio="xMidYMid meet"/>` : person.signature?.type === 'application/pdf' ? `<text x="67" y="8" text-anchor="middle" font-size="${titleBlockFont(2.1)}">SIGNATURE PDF</text>` : '';
-  return `<g transform="translate(0 ${y})"><rect width="${width}" height="15" fill="#fff" stroke="#17212b" stroke-width=".32"/><text x="3" y="5" font-size="${titleBlockFont(2.45)}" font-weight="700">${label} : ${escapeText(person.name || '—')}</text><text x="3" y="10" font-size="${titleBlockFont(2.25)}">Fonction : ${escapeText(person.role || '—')}</text>${signature}</g>`;
+  const signed = person.signature?.dataUrl || person.signature?.type === 'application/pdf';
+  const textWidth = signed ? 49 : width - 8;
+  const name = titleBlockText(`${label} : ${person.name || '—'}`, 4, 5, textWidth, 2.45, 700);
+  const role = titleBlockText(`Fonction : ${person.role || '—'}`, 4, 5 + name.height, textWidth, 2.25);
+  const signature = person.signature?.dataUrl ? `<image href="${person.signature.dataUrl}" x="55" y="2" width="23" height="12" preserveAspectRatio="xMidYMid meet"/>` : signed ? `<text x="66" y="8" text-anchor="middle" font-size="${titleBlockFont(2.1)}">SIGNATURE PDF</text>` : '';
+  return { height: Math.max(16, 5 + name.height + role.height), markup: `<g transform="translate(0 ${y})">${name.markup}${role.markup}${signature}</g>` };
 }
 
 function circleIsVisible(circle) {
@@ -738,44 +760,54 @@ function renderTitleBlock() {
   titleBlock.style.display = state.showTitleBlock ? '' : 'none';
   if (!state.showTitleBlock) return;
   const visibleInterventions = visibleInterventionsForTitleBlock();
-  const count = visibleInterventions.length;
   const width = 82;
-  const headerHeight = 31;
-  const footerHeight = 20;
-  const peopleHeight = 15 + (state.validatorEnabled ? 15 : 0);
   const sheetHeight = state.orientation === 'portrait' ? 420 : 297;
-  const accessoryHeight = state.logo || state.client ? 19 : 0;
-  const desiredRowHeight = visibleInterventions.some((item) => item.overEnabled) ? 27 : 23;
-  const availableRowsHeight = sheetHeight - state.sheetMargin * 2 - accessoryHeight - headerHeight - footerHeight - peopleHeight;
-  const rowHeight = count ? Math.min(desiredRowHeight, availableRowsHeight / count) : 0;
-  const height = headerHeight + rowHeight * count + footerHeight + peopleHeight;
   const sheetWidth = state.orientation === 'portrait' ? 297 : 420;
-  titleBlock.setAttribute('transform', `translate(${sheetWidth - width - state.sheetMargin} ${sheetHeight - height - state.sheetMargin})`);
   const scale = mapScale();
-  const segmentMeters = niceScaleSegment((12 * metersPerPlanUnit()) / scale);
-  const segmentWidth = metersToPlanUnits(segmentMeters) * scale;
-  const scaleTotal = segmentWidth * 4;
   const displayDate = state.planDate ? new Date(`${state.planDate}T12:00:00`).toLocaleDateString('fr-FR') : '—';
-  const rows = visibleInterventions.map((item, index) => {
-    const y = headerHeight + index * rowHeight;
-    const placed = [...state.circles].reverse().find((circle) => circle.interventionId === item.id && circleIsVisible(circle));
-    const threshold = placed?.threshold ?? item.displayThreshold ?? 2.5;
-    const attenuated = placed?.attenuated ?? item.attenuation;
-    const distance = placed?.radius ?? radiusMeters(item, threshold === 'manual' ? 2.5 : threshold, attenuated);
-    const thresholdLabel = threshold === 'manual' ? 'Balisage manuel' : threshold === 25 ? 'Balisage 25 µSv/1h' : 'Balisage 2,5 µSv/h';
-    const compact = rowHeight < 24;
-    const positions = compact ? { company: 4.2, time: 7.7, source: 11.2, marking: item.overEnabled ? 14.8 : rowHeight - 2.5, over: rowHeight - 1.1 } : { company: 5.5, time: 9.7, source: 13.8, marking: 18.2, over: 24.8 };
-    const font = compact ? 1.85 : 2.25;
-    const overMarkup = item.overEnabled ? `<line x1="10" y1="${positions.over - .7}" x2="15" y2="${positions.over - .7}" stroke="${item.overColor}" stroke-width="${Math.max(0.3, Math.min(1.4, Number(item.overWidth) || 1.2))}" ${item.overStyle === 'dashed' ? 'stroke-dasharray="1.2 .8"' : ''}/><text x="17" y="${positions.over}" font-size="${titleBlockFont(compact ? 1.7 : 2.1)}">Surbalisage de sécurité : ${formatDistance(Number(item.overDistance))}</text>` : '';
-    return `<g transform="translate(0 ${y})"><rect width="${width}" height="${rowHeight}" fill="#fff" stroke="#26353e" stroke-width=".32"/><rect x="2.5" y="2" width="5" height="${Math.max(4, rowHeight - 4)}" rx=".6" fill="${item.color}"/><text x="10" y="${positions.company}" font-size="${titleBlockFont(compact ? 2.1 : 2.7)}" font-weight="700">${escapeText(item.company)}</text><text x="10" y="${positions.time}" font-size="${titleBlockFont(font)}">Tirs : ${formatTime(item.scheduleStart)} → ${formatTime(item.scheduleEnd)}</text><text x="10" y="${positions.source}" font-size="${titleBlockFont(font)}">${item.isotope} · ${Number(item.activity).toLocaleString('fr-FR')} ${item.unit} · ${attenuated ? 'att. 1/250' : 'sans att.'}</text><text x="10" y="${positions.marking}" font-size="${titleBlockFont(font)}" font-weight="700">${thresholdLabel} : ${formatDistance(distance)}</text>${overMarkup}</g>`;
+  const location = titleBlockText(`Localisation : ${state.location || '—'}`, 4, 25, width - 8, 2.6);
+  let cursor = 25 + location.height + 3;
+  const rows = visibleInterventions.map((item) => {
+    const y = cursor;
+    const circles = state.circles.filter((circle) => circle.interventionId === item.id && circleIsVisible(circle));
+    const threshold = item.displayThreshold ?? 2.5;
+    const entries = CrobardBalisage.entries(circles, { threshold, distance: radiusMeters(item, threshold === 'manual' ? 2.5 : threshold, item.attenuation), attenuated: item.attenuation });
+    const mixed = new Set(entries.map((entry) => entry.attenuated)).size > 1;
+    let rowCursor = 5;
+    const text = (value, size = 2.25, weight = 400, x = 10) => {
+      const part = titleBlockText(value, x, rowCursor, width - x - 4, size, weight);
+      rowCursor += part.height;
+      return part.markup;
+    };
+    let contents = text(item.company, 2.7, 700) + text(`Tirs : ${formatTime(item.scheduleStart)} → ${formatTime(item.scheduleEnd)}`);
+    contents += text(`${item.isotope} · ${Number(item.activity).toLocaleString('fr-FR')} ${item.unit} · ${mixed ? 'atténuation selon balisage' : entries[0]?.attenuated ? 'att. 1/250' : 'sans att.'}`);
+    contents += entries.map((entry) => text(`${CrobardBalisage.label(entry.threshold)} : ${formatDistance(entry.distance)}${mixed ? entry.attenuated ? ' · att. 1/250' : ' · sans att.' : ''}`, 2.25, 700)).join('');
+    if (item.overEnabled) {
+      contents += `<line x1="10" y1="${rowCursor - 1}" x2="14" y2="${rowCursor - 1}" stroke="${item.overColor}" stroke-width="${Math.max(0.3, Math.min(1.4, Number(item.overWidth) || 1.2))}" ${item.overStyle === 'dashed' ? 'stroke-dasharray="1.2 .8"' : ''}/>`;
+      contents += text(`Surbalisage de sécurité : ${formatDistance(Number(item.overDistance))}`, 2.1, 400, 16);
+    }
+    const rowHeight = rowCursor + 1;
+    cursor += rowHeight + 2;
+    return `<g transform="translate(0 ${y})"><rect x="2" width="78" height="${rowHeight}" rx="2" fill="var(--arc-plan-tint)"/><rect x="4" y="3" width="3" height="${rowHeight - 6}" rx="1.2" fill="${item.color}"/>${contents}</g>`;
   }).join('');
-  const bars = Array.from({ length: 4 }, (_, index) => `<rect x="${index * segmentWidth}" width="${segmentWidth}" height="3.5" fill="${index % 2 ? '#fff' : '#17212b'}" stroke="#17212b" stroke-width=".3"/>`).join('');
-  const peopleY = headerHeight + rowHeight * count + footerHeight;
-  const peopleRows = personRowMarkup('Réalisé par', state.author, peopleY, width) + (state.validatorEnabled ? personRowMarkup('Validé par', state.validator, peopleY + 15, width) : '');
-  const clientLabel = escapeText(state.client || 'CLIENT');
-  const logoMarkup = state.logo?.dataUrl ? `<g transform="translate(0 -19)"><image href="${state.logo.dataUrl}" x="0" y="0" width="24" height="16" preserveAspectRatio="xMinYMid meet"/><text x="28" y="10" font-size="${titleBlockFont(3.4)}" font-weight="700">${clientLabel}</text></g>` : state.logo?.type === 'application/pdf' ? `<g transform="translate(0 -19)"><text x="0" y="7" font-size="${titleBlockFont(2.4)}" font-weight="700">LOGO PDF</text><text x="28" y="7" font-size="${titleBlockFont(3.4)}" font-weight="700">${clientLabel}</text></g>` : state.client ? `<text x="0" y="-7" font-size="${titleBlockFont(3.4)}" font-weight="700">${clientLabel}</text>` : '';
-  const titleHeader = `<g transform="translate(2.5 2.2)"><image href="assets/onyx-logo.png" x="0" y=".7" width="18" height="7.2" preserveAspectRatio="xMinYMid meet"/><line x1="20.5" y1="0" x2="20.5" y2="8.6" stroke="#b7c0c6" stroke-width=".3"/><g transform="translate(23 0)"><text x="0" y="3.35" font-size="${titleBlockFont(2.25)}" font-weight="700">PLAN DE CONTRÔLE</text><text x="0" y="7.65" font-size="${titleBlockFont(2.25)}" font-weight="700">GAMMAGRAPHIQUE</text></g></g>`;
-  titleBlock.innerHTML = `${logoMarkup}<rect width="${width}" height="${height}" fill="#fff" stroke="#17212b" stroke-width=".65"/><rect width="${width}" height="13" fill="#edf1f3" stroke="#17212b" stroke-width=".65"/><path d="M0 22H${width}M0 31H${width}" stroke="#17212b" stroke-width=".32"/>${titleHeader}<text x="3" y="19" font-size="${titleBlockFont(2.6)}">Date : ${displayDate}</text><text x="3" y="28" font-size="${titleBlockFont(2.6)}">Localisation : ${escapeText(state.location || '—')}</text>${rows}<g transform="translate(3 ${headerHeight + rowHeight * count + 4})"><text x="0" y="-1.2" font-size="${titleBlockFont(2.35)}">Échelle graphique — mètres</text>${bars}<text x="0" y="8" font-size="${titleBlockFont(2.2)}">0</text><text x="${scaleTotal / 2 - 2}" y="8" font-size="${titleBlockFont(2.2)}">${segmentMeters * 2}</text><text x="${scaleTotal - 2}" y="8" font-size="${titleBlockFont(2.2)}">${segmentMeters * 4} m</text></g>${peopleRows}`;
+  const scaleY = cursor + 4;
+  cursor += 18;
+  const author = personRowMarkup('Réalisé par', state.author, cursor, width);
+  cursor += author.height;
+  const validator = state.validatorEnabled ? personRowMarkup('Validé par', state.validator, cursor, width) : null;
+  if (validator) cursor += validator.height;
+  const height = cursor + 2;
+  const clientText = titleBlockText(state.client || 'CLIENT', state.logo ? 28 : 0, 6, state.logo ? width - 28 : width, 3.4, 700);
+  const accessoryHeight = state.logo || state.client ? Math.max(19, clientText.height + 6) : 0;
+  const logoMarkup = accessoryHeight ? `<g transform="translate(0 ${-accessoryHeight})">${state.logo?.dataUrl ? `<image href="${state.logo.dataUrl}" width="24" height="16" preserveAspectRatio="xMinYMid meet"/>` : state.logo?.type === 'application/pdf' ? `<text x="0" y="7" font-size="${titleBlockFont(2.4)}">LOGO PDF</text>` : ''}${clientText.markup}</g>` : '';
+  const fit = Math.min(1, (sheetHeight - state.sheetMargin * 2) / (height + accessoryHeight));
+  const segmentMeters = niceScaleSegment((12 * metersPerPlanUnit() * fit) / scale);
+  const segmentWidth = metersToPlanUnits(segmentMeters) * scale / fit;
+  const scaleTotal = segmentWidth * 4;
+  const bars = Array.from({ length: 4 }, (_, index) => `<rect x="${index * segmentWidth}" width="${segmentWidth}" height="3.5" fill="${index % 2 ? 'var(--arc-plan-paper)' : 'var(--arc-plan-ink)'}" stroke="var(--arc-plan-ink)" stroke-width=".3"/>`).join('');
+  titleBlock.setAttribute('transform', `translate(${sheetWidth - width * fit - state.sheetMargin} ${sheetHeight - height * fit - state.sheetMargin})`);
+  const titleHeader = `<g transform="translate(4 3)"><image href="assets/onyx-logo.png" x="0" y=".7" width="18" height="7.2" preserveAspectRatio="xMinYMid meet"/><g transform="translate(23 0)"><text x="0" y="3.35" font-size="${titleBlockFont(2.25)}" font-weight="700">PLAN DE CONTRÔLE</text><text x="0" y="7.65" font-size="${titleBlockFont(2.25)}" font-weight="700">GAMMAGRAPHIQUE</text></g></g>`;
+  titleBlock.innerHTML = `<g transform="scale(${fit})" fill="var(--arc-plan-ink)">${logoMarkup}<rect width="${width}" height="${height}" rx="3" fill="var(--arc-plan-paper)" stroke="var(--arc-plan-border)" stroke-width=".3"/>${titleHeader}<text x="4" y="19" font-size="${titleBlockFont(2.6)}">Date : ${displayDate}</text>${location.markup}${rows}<g transform="translate(4 ${scaleY})"><text x="0" y="-1.2" font-size="${titleBlockFont(2.35)}">Échelle graphique — mètres</text>${bars}<text x="0" y="8" font-size="${titleBlockFont(2.2)}">0</text><text x="${scaleTotal / 2 - 2}" y="8" font-size="${titleBlockFont(2.2)}">${segmentMeters * 2}</text><text x="${scaleTotal - 2}" y="8" font-size="${titleBlockFont(2.2)}">${segmentMeters * 4} m</text></g>${author.markup}${validator?.markup || ''}</g>`;
 }
 
 function renderCountPicker() {
@@ -1622,9 +1654,15 @@ function setPlanZoom(value) {
   scheduleInteractionUpdate();
   finalizeNavigation();
 }
+function resetPlanView() {
+  state.panX = 0;
+  state.panY = 0;
+  setPlanZoom(1);
+}
 document.querySelector('#plan-zoom').addEventListener('input', (event) => setPlanZoom(event.target.value));
 document.querySelector('#zoom-out').addEventListener('click', (event) => { event.preventDefault(); setPlanZoom(mapScale() - 0.5); });
 document.querySelector('#zoom-in').addEventListener('click', (event) => { event.preventDefault(); setPlanZoom(mapScale() + 0.5); });
+document.querySelector('#fit-plan').addEventListener('click', resetPlanView);
 document.querySelectorAll('.tool[data-tool]').forEach((button) => button.addEventListener('click', () => setTool(button.dataset.tool)));
 document.querySelector('#settings-button').addEventListener('click', openSettings);
 document.querySelector('#settings-close').addEventListener('click', () => settingsDialog.close());

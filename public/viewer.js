@@ -167,9 +167,10 @@ function distance(value) { return !Number.isFinite(value) ? '—' : `${value.toL
 function renderCartouche() {
   const visible = model.zones.filter((z) => z.x + z.radius >= view.x && z.x - z.radius <= view.x + view.width && z.y + z.radius >= view.y && z.y - z.radius <= view.y + view.height);
   const teams = model.teams.filter((team) => !model.zones.length || visible.some((z) => z.team === team.id));
-  const lastVisible = new Map();
-  visible.forEach((zone) => lastVisible.set(zone.team, zone));
-  const key = JSON.stringify([model.revision, teams.map((t) => [t.id, lastVisible.get(t.id)]), view.width, $('#stage').clientWidth]);
+  const markings = new Map(teams.map((team) => [team.id, CrobardBalisage.entries(
+    visible.filter((zone) => zone.team === team.id).map((zone) => ({ ...zone, distance: zone.distance ?? zone.radius * model.metersPerUnit })), team,
+  )]));
+  const key = JSON.stringify([model.revision, [...markings], view.width, $('#stage').clientWidth]);
   if (key === cartoucheKey) return;
   cartoucheKey = key;
   const panel = $('#cartouche'); panel.replaceChildren();
@@ -177,14 +178,14 @@ function renderCartouche() {
   if (model.client) node('p', model.client, panel);
   node('h2', 'PLAN DE CONTRÔLE GAMMAGRAPHIQUE', panel);
   node('p', `Date : ${model.date}`, panel); node('p', `Localisation : ${model.location || '—'}`, panel);
-  teams.forEach((configured) => {
-    const last = lastVisible.get(configured.id);
-    const team = Number.isFinite(last?.distance) ? { ...configured, distance: last.distance, threshold: last.threshold, attenuated: last.attenuated } : configured;
+  teams.forEach((team) => {
+    const entries = markings.get(team.id);
+    const mixed = new Set(entries.map((entry) => entry.attenuated)).size > 1;
     const row = node('div', null, panel, 'team'); row.style.setProperty('--team-color', team.color);
     node('strong', team.company, row);
     node('p', `Tirs : ${team.start.replace(':', 'h')} → ${team.end.replace(':', 'h')}`, row);
-    node('p', `${team.isotope} · ${team.activity} ${team.unit} · ${team.attenuated ? 'att. 1/250' : 'sans atténuation'}`, row);
-    node('p', `${team.threshold === 'manual' ? 'Balisage manuel' : team.threshold === 25 ? 'Balisage 25 µSv/1h' : 'Balisage 2,5 µSv/h'} : ${distance(team.distance)}`, row);
+    node('p', `${team.isotope} · ${team.activity} ${team.unit} · ${mixed ? 'atténuation selon balisage' : entries[0]?.attenuated ? 'att. 1/250' : 'sans atténuation'}`, row);
+    entries.forEach((entry) => node('p', `${CrobardBalisage.label(entry.threshold)} : ${distance(entry.distance)}${mixed ? entry.attenuated ? ' · att. 1/250' : ' · sans atténuation' : ''}`, row, 'marking'));
     if (team.overDistance !== null) node('p', `Surbalisage de sécurité : ${distance(team.overDistance)}`, row);
   });
   const raw = view.width / Math.max(1, $('#stage').clientWidth) * model.metersPerUnit * 30;
