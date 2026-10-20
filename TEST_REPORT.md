@@ -2,7 +2,7 @@
 
 Date : 20 octobre 2026
 
-## Candidate locale 0.10.1 — non publiée
+## Version 0.10.1 — Preview publiée après validation visuelle
 
 - 69 tests Python réussis ; syntaxes JavaScript et `git diff --check` vérifiés.
 - `node tests/cartouche_behaviour.cjs` : balisages distincts, distances réelles et
@@ -15,7 +15,10 @@ Date : 20 octobre 2026
   gauche mesurés à 72 px sans débordement de contenu.
 - Captures locales dans `output/crobard-0101-{editeur,consultation,mobile}.jpg`.
 - Aucun changement de droits, de routes serveur ou de données de production.
-  Publication et recette réelle YunoHost de cette candidate NON_EXÉCUTÉES.
+  Recette réelle YunoHost de cette version NON_EXÉCUTÉE.
+- Publication Preview autorisée par Damien après examen des captures ; contrôles
+  GitHub du paquet et du catalogue, promotion et publication Store RÉUSSIS.
+  Version et SHA du flux public cohérents ; détails dans `.arcenal/DELIVERY_REPORT.md`.
 
 ## Contrôles locaux
 

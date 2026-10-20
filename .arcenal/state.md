@@ -8,15 +8,15 @@ Statut : ACTUEL
 
 ## Version de référence
 
-- Preview publiée : `0.10.0~ynh1`, branche `preview`, paquet `21531d12a9124344561cb31c970b644659c90d7a`.
-- Catalogue Preview publié : `ffab97a19c2c20ea1cd29e7f9bc2746a05c24e2a` ; flux publics et manifeste vérifiés.
+- Preview publiée : `0.10.1~ynh1`, branche `preview`, paquet `fe7c9b269634f5d569bb3b2cc76e87919a7ac37b`.
+- Catalogue Preview publié : `cbecc6d10733e81303395b7302f763bb7dc85f63` ; flux publics et manifeste vérifiés.
 - Stable conservée en `0.9.16~ynh1`, paquet `2528740162206f86c286b711024c6b11865a4e88`.
 - Consultation client protégée par code intégrée à Crobard ; aucune seconde application créée.
-- Candidate locale non publiée : `0.10.1~ynh1`, cartouches, balisages multiples, alignement des outils et bouton Voir tout.
+- Version 0.10.1 publiée après validation visuelle de Damien : cartouches, balisages multiples, alignement des outils et bouton Voir tout.
 
 ## Lot actif
 
-- Finitions visuelles demandées par Damien, décrites dans `.arcenal/CARTOUCHE_REFINEMENT.md` ; montrer le résultat avant toute publication.
+- Finitions visuelles validées par Damien et publiées en Preview, décrites dans `.arcenal/CARTOUCHE_REFINEMENT.md`.
 
 ## Dernière étape validée
 
@@ -48,4 +48,4 @@ Statut : ACTUEL
 
 ## Prochaine action
 
-- Faire valider les captures de la candidate locale 0.10.1 avant publication. La recette YunoHost isolée reste nécessaire avant partage de plans clients.
+- Effectuer la recette YunoHost isolée de la Preview 0.10.1 avant partage de plans clients. Aucune mise à jour du serveur n’a été exécutée par cette publication.

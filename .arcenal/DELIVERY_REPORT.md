@@ -1,4 +1,28 @@
-# Livraison Crobard 0.10.0~ynh1 — Preview
+# Livraison Crobard 0.10.1~ynh1 — Preview
+
+## Publication 0.10.1~ynh1
+
+Autorisation de Damien le 20 octobre 2026, après présentation et validation des
+captures locales. Même application YunoHost `arcenal_draw`, sans nouvelle installation.
+
+- Lot : `.arcenal/CARTOUCHE_REFINEMENT.md`.
+- Contenu : cartouches arrondis sans perte d’information, tous les balisages
+  distincts visibles avec leurs distances, outils centrés et retour Voir tout.
+- Source : https://github.com/arcenal-coder/arcenal-draw_ynh, branche `preview`.
+- SHA du paquet : `fe7c9b269634f5d569bb3b2cc76e87919a7ac37b`.
+- Tests locaux : 69 tests Python et deux scénarios JavaScript RÉUSSIS ; syntaxes
+  JavaScript/Bash et `git diff --check` RÉUSSIS. Recherche ciblée de secrets sans résultat.
+- Contrôles GitHub du paquet : RÉUSSIS, https://github.com/arcenal-coder/arcenal-draw_ynh/actions/runs/39427790253
+- Référencement catalogue : `ff558ebe18403f734620ca61d6c1a39c513d3cc3`, 23 tests locaux RÉUSSIS.
+- Contrôles catalogue : RÉUSSIS, https://github.com/arcenal-coder/arcenal-systeme-catalogue/actions/runs/39427931741
+- Promotion Preview : RÉUSSIE, https://github.com/arcenal-coder/arcenal-systeme-catalogue/actions/runs/39428065713 ; catalogue `cbecc6d10733e81303395b7302f763bb7dc85f63`.
+- Publication Store : RÉUSSIE, https://github.com/arcenal-coder/arcenal-systeme-catalogue/actions/runs/39428096045 ; flux publics v1/v3 cohérents avec le SHA du paquet et le manifeste `0.10.1~ynh1`. Stable inchangée en `0.9.16~ynh1`.
+- Miroir GitHub Pages : VÉRIFIÉ sur les flux Preview v1/v3, même version et SHA. Le fichier partagé `assets/balisage.js` du paquet épinglé est accessible.
+- Le workflow officiel actualise aussi les métadonnées de ses sources YunoHost (Dolibarr dans le flux v3) ; seule l’entrée `arcenal_draw` du manifeste de diffusion ARCenal a été promue. Aucun serveur client n’est mis à jour par cette génération.
+- Aucune opération sur un serveur de production. Installation/mise à niveau,
+  SSO/HTTPS et sauvegarde/restauration YunoHost de cette version : NON_EXÉCUTÉS.
+- Retour arrière : sauvegarde YunoHost pré-mise à niveau à conserver et restaurer
+  pour un retour complet. Paquet précédent : `21531d12a9124344561cb31c970b644659c90d7a`, version `0.10.0~ynh1`.
 
 ## Publication 0.10.0~ynh1
 
