@@ -44,6 +44,8 @@ let selectedOverzoneKeys = new Set();
 let selectedMeasurementIds = new Set();
 let selectedSignalType = 'roadblock';
 let pendingMeasurementPoint = null;
+let measurementPreviewPoint = null;
+let measurementPreviewFrame = null;
 let pendingFileName = '';
 let pendingPlanImport = null;
 let scaleSetup = { active: false, points: [], nativeDistance: 0 };
@@ -487,6 +489,9 @@ function updateMapTransform() {
   mapLayer.setAttribute('transform', `translate(${150 + state.panX} ${135 + state.panY}) scale(${scale}) translate(-150 -135)`);
   impactLayer.querySelectorAll('.impact-marker').forEach((marker) => {
     marker.setAttribute('transform', `translate(${marker.dataset.x} ${marker.dataset.y}) scale(${1 / scale})`);
+  });
+  measurementLayer.querySelectorAll('[data-measurement-decoration]').forEach((decoration) => {
+    decoration.setAttribute('transform', `translate(${decoration.dataset.x} ${decoration.dataset.y}) scale(${1 / scale})`);
   });
   if (!scaleDistancePrompt.hidden) positionScaleDistancePrompt();
   document.querySelector('#plan-zoom-value').textContent = zoomLabel();
@@ -956,29 +961,37 @@ function measurementDistance(measurement) {
 
 function renderMeasurements() {
   measurementLayer.replaceChildren();
-  (state.measurements || []).forEach((measurement) => {
+  const measurements = [...(state.measurements || [])];
+  if (pendingMeasurementPoint && measurementPreviewPoint) {
+    measurements.push({ x1: pendingMeasurementPoint.x, y1: pendingMeasurementPoint.y, x2: measurementPreviewPoint.x, y2: measurementPreviewPoint.y, preview: true });
+  }
+  measurements.forEach((measurement) => {
     const midpointX = (measurement.x1 + measurement.x2) / 2;
     const midpointY = (measurement.y1 + measurement.y2) / 2;
     const label = formatDistance(measurementDistance(measurement));
-    const labelWidth = Math.max(18, label.length * 2.4 + 5);
+    const labelWidth = Math.max(10, label.length * 1.7 + 3);
     const element = document.createElementNS(NS, 'g');
-    element.setAttribute('class', `measurement-item${selectedMeasurementIds.has(measurement.id) ? ' selected' : ''}`);
-    element.dataset.measurementId = measurement.id;
-    element.innerHTML = `<line x1="${measurement.x1}" y1="${measurement.y1}" x2="${measurement.x2}" y2="${measurement.y2}"/><circle class="measurement-end" cx="${measurement.x1}" cy="${measurement.y1}" r="1.2"/><circle class="measurement-end" cx="${measurement.x2}" cy="${measurement.y2}" r="1.2"/><g class="measurement-label" transform="translate(${midpointX} ${midpointY}) scale(${1 / mapScale()})"><rect x="${-labelWidth / 2}" y="-3.8" width="${labelWidth}" height="7.6" rx="1.5"/><text y="1.25">${label}</text></g>`;
-    element.addEventListener('click', selectMeasurement);
+    element.setAttribute('class', `measurement-item${measurement.preview ? ' measurement-preview' : ''}${selectedMeasurementIds.has(measurement.id) ? ' selected' : ''}`);
+    if (measurement.id) element.dataset.measurementId = measurement.id;
+    const coordinates = `x1="${measurement.x1}" y1="${measurement.y1}" x2="${measurement.x2}" y2="${measurement.y2}"`;
+    element.innerHTML = `<line class="measurement-hit" ${coordinates}/><line class="measurement-line" ${coordinates}/>${measurementCross(measurement.x1, measurement.y1)}${measurementCross(measurement.x2, measurement.y2)}<g class="measurement-label" data-measurement-decoration data-x="${midpointX}" data-y="${midpointY}" transform="translate(${midpointX} ${midpointY}) scale(${1 / mapScale()})"><rect x="${-labelWidth / 2}" y="-6.5" width="${labelWidth}" height="5" rx=".6"/><text y="-3">${label}</text></g>`;
+    if (!measurement.preview) element.addEventListener('click', selectMeasurement);
     measurementLayer.append(element);
   });
   if (pendingMeasurementPoint) {
-    const anchor = document.createElementNS(NS, 'circle');
+    const anchor = document.createElementNS(NS, 'g');
     anchor.setAttribute('class', 'measurement-anchor');
-    anchor.setAttribute('cx', pendingMeasurementPoint.x);
-    anchor.setAttribute('cy', pendingMeasurementPoint.y);
-    anchor.setAttribute('r', 2);
+    anchor.innerHTML = measurementCross(pendingMeasurementPoint.x, pendingMeasurementPoint.y);
     measurementLayer.append(anchor);
   }
 }
 
+function measurementCross(x, y) {
+  return `<g class="measurement-end" data-measurement-decoration data-x="${x}" data-y="${y}" transform="translate(${x} ${y}) scale(${1 / mapScale()})"><path d="M-.75 -.75L.75 .75M-.75 .75L.75 -.75"/></g>`;
+}
+
 function selectMeasurement(event) {
+  if (activeTool === 'measure') return;
   event.stopPropagation();
   if (activeTool !== 'select') return;
   const id = event.currentTarget.dataset.measurementId;
@@ -1246,7 +1259,12 @@ function renderAll() {
 }
 
 function setTool(tool) {
-  if (tool !== 'measure') pendingMeasurementPoint = null;
+  if (tool !== 'measure') {
+    pendingMeasurementPoint = null;
+    measurementPreviewPoint = null;
+    cancelAnimationFrame(measurementPreviewFrame);
+    measurementPreviewFrame = null;
+  }
   activeTool = tool;
   document.querySelectorAll('.tool').forEach((button) => button.classList.toggle('active', button.dataset.tool === tool));
   circlePanel.hidden = tool !== 'circle';
@@ -1254,6 +1272,7 @@ function setTool(tool) {
   signalPanel.hidden = tool !== 'signal';
   document.querySelector('.canvas-area').classList.toggle('can-pan', tool === 'select');
   document.querySelector('.canvas-area').classList.toggle('box-selecting', tool === 'multiselect');
+  document.querySelector('.canvas-area').classList.toggle('measuring', tool === 'measure');
   canvasHint.textContent = tool === 'circle' ? 'Cliquez sur le point d’impact dans le plan.' : tool === 'signal' ? 'Cliquez pour placer un équipement de signalisation.' : tool === 'measure' ? 'Cliquez sur le premier point de la mesure.' : tool === 'multiselect' ? 'Encadrez les points d’impact. Maj ajoute, Alt retire.' : 'Glissez le fond pour le déplacer. La molette règle son zoom.';
   renderMeasurements();
 }
@@ -1369,6 +1388,7 @@ function placeMeasurement(event) {
   const point = svgPointFromEvent(event);
   if (!pendingMeasurementPoint) {
     pendingMeasurementPoint = point;
+    measurementPreviewPoint = null;
     canvasHint.textContent = 'Cliquez sur le second point de la mesure.';
     renderMeasurements();
     return;
@@ -1376,7 +1396,9 @@ function placeMeasurement(event) {
   if (Math.hypot(point.x - pendingMeasurementPoint.x, point.y - pendingMeasurementPoint.y) < 0.01) return;
   state.measurements.push({ id: uid('measurement'), x1: pendingMeasurementPoint.x, y1: pendingMeasurementPoint.y, x2: point.x, y2: point.y });
   pendingMeasurementPoint = null;
-  canvasHint.textContent = 'Mesure ajoutée. Cliquez pour commencer une nouvelle mesure.';
+  measurementPreviewPoint = null;
+  setTool('select');
+  canvasHint.textContent = 'Mesure ajoutée. Cliquez sur le trait ou la distance pour la sélectionner et la supprimer.';
   renderZones();
   saveState();
 }
@@ -1635,6 +1657,20 @@ document.querySelectorAll('[data-remove-signature]').forEach((button) => button.
 }));
 sheet.addEventListener('click', handleSheetClick);
 sheet.addEventListener('click', handleScaleClick, true);
+sheet.addEventListener('click', (event) => {
+  if (activeTool !== 'measure' || scaleSetup.active || event.target.closest('#title-block')) return;
+  event.stopImmediatePropagation();
+  placeMeasurement(event);
+}, true);
+sheet.addEventListener('pointermove', (event) => {
+  if (activeTool !== 'measure' || !pendingMeasurementPoint) return;
+  measurementPreviewPoint = svgPointFromEvent(event);
+  if (measurementPreviewFrame !== null) return;
+  measurementPreviewFrame = requestAnimationFrame(() => {
+    measurementPreviewFrame = null;
+    renderMeasurements();
+  });
+});
 sheet.addEventListener('wheel', (event) => {
   event.preventDefault();
   const box = sheet.getBoundingClientRect();

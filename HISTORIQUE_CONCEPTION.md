@@ -1,7 +1,7 @@
 # Crobard — Historique de conception et des versions
 
-Dernière mise à jour : 15 octobre 2026
-Version courante au moment de la rédaction : `0.9.16~ynh1`
+Dernière mise à jour : 20 octobre 2026
+Version courante au moment de la rédaction : `0.9.17~ynh1` (candidate Preview)
 Dépôt : <https://github.com/arcenal-coder/arcenal-draw_ynh>
 
 ## Objet du document
@@ -384,6 +384,15 @@ Le prototype initial a défini les fonctions métier suivantes avant la créatio
 - Conservation de l’identifiant technique `arcenal_draw`, du service et des chemins de données pour garantir la continuité des mises à jour YunoHost.
 - Mise à jour du nom visible dans YunoHost, l’interface, les messages et la documentation.
 - Invalidation du cache des ressources frontend afin d’afficher immédiatement la nouvelle identité après mise à niveau.
+
+#### `0.9.17~ynh1` — 20 octobre 2026 — candidate Preview
+
+- Synchronisation du libellé Crobard dans les paramètres YunoHost et la permission principale lors de l’installation, de la mise à niveau et de la restauration.
+- Remplacement des ronds de mesure par de petites croix de taille constante à l’écran et un trait fin.
+- Distance affichée au-dessus du segment ; aperçu pendant le choix du second point.
+- Retour en mode sélection après le second clic ; sélection possible sur le trait ou l’étiquette, puis suppression par la corbeille ou Retour/Supprimer.
+- Conservation du format des mesures enregistrées : les projets existants bénéficient du nouveau rendu.
+- Tests comportementaux sur les deux clics, le calibrage, le zoom ×1/×10/×50 et la sélection/suppression ; tests des commandes de renommage et de leur propagation d’erreur.
 
 ## Solutions abandonnées à ne pas réintroduire sans nouvelle validation
 

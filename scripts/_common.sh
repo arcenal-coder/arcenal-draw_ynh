@@ -2,6 +2,11 @@
 
 app="arcenal_draw"
 
+sync_public_label() {
+    ynh_app_setting_set --key=label --value="Crobard"
+    yunohost user permission update "$app.main" --label="Crobard"
+}
+
 configure_files() {
     ynh_config_add_nginx
     ynh_config_add_systemd

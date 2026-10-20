@@ -14,6 +14,7 @@ mkdir -p "$install_dir/backend"
 cp -a "$package_root/backend/." "$install_dir/backend/"
 set_runtime_permissions
 configure_files
+sync_public_label
 yunohost service add "$app" --description="Création de plans de contrôle gammagraphique" --log="systemd" || true
 ynh_systemctl --service="$app" --action="start" --log_path="systemd"
 ynh_systemctl --service="nginx" --action="reload"
