@@ -4,7 +4,7 @@ Date : 20 octobre 2026.
 
 - Dépôt source : https://github.com/arcenal-coder/arcenal-draw_ynh
 - Branche de livraison : `preview`.
-- SHA du paquet : à renseigner après commit.
+- SHA du paquet : `a8f71633e5e227f7a1d459c615a3a34179e78050`.
 - Publication demandée et autorisée par Damien dans cette conversation.
 
 ## Contenu
@@ -26,7 +26,12 @@ Date : 20 octobre 2026.
 
 ## Diffusion et retour arrière
 
-- Publication GitHub et résolution du Store Preview : en cours.
+- Publication GitHub sur `preview` : RÉUSSIE, paquet `a8f71633e5e227f7a1d459c615a3a34179e78050`.
+- Référencement catalogue : commit initial `9605fee00a3e900b45e73f2c87709397eecc4b40`, promotion Preview `b2a67ee6ac66f6f1deca9e3681b6a3ea606b4a3b`.
+- Workflow officiel de promotion : RÉUSSI, https://github.com/arcenal-coder/arcenal-systeme-catalogue/actions/runs/39391986786
+- Workflow de publication : RÉUSSI, https://github.com/arcenal-coder/arcenal-systeme-catalogue/actions/runs/39392021922
+- Flux publics `preview/v1/release.json` et `preview/v3/apps.json` : VÉRIFIÉS, même SHA, branche `preview`, nom Crobard et version 0.9.17. Manifeste du paquet accessible sur GitHub et cohérent.
+- 23 tests du catalogue RÉUSSIS après promotion. Stable vérifiée inchangée en 0.9.16.
 - Les catalogues sont épinglés sur un SHA complet ; aucune mise à jour de production n’est exécutée par cette livraison.
 - Version précédente : `0.9.16~ynh1`, paquet `2528740162206f86c286b711024c6b11865a4e88`.
 - Avant mise à niveau, conserver une sauvegarde YunoHost. Pour un retour complet, restaurer cette sauvegarde ; une correction fondée sur l’ancien code doit recevoir un numéro de version supérieur.
